@@ -1,5 +1,6 @@
-from sqlalchemy import Column, String, Boolean, DateTime, Enum
+from sqlalchemy import Column, String, Boolean, DateTime
 from sqlalchemy.dialects.postgresql import UUID
+from sqlalchemy.orm import relationship
 import uuid
 from datetime import datetime, timezone
 
@@ -12,9 +13,12 @@ class User(Base):
     hashed_password = Column(String, nullable=False)
     first_name = Column(String, nullable=False)
     last_name = Column(String, nullable=False)
-    role = Column(String, nullable=False, default='teacher')  # 'admin','teacher','specialist','parent','student'
     is_active = Column(Boolean, default=True, nullable=False)
     last_login_at = Column(DateTime(timezone=True))
 
     created_at = Column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc), nullable=False)
     updated_at = Column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc), onupdate=lambda: datetime.now(timezone.utc), nullable=False)
+    
+    # Relationships
+    user_roles = relationship("UserRole", back_populates="user", cascade="all, delete-orphan")
+    role_preference = relationship("UserRolePreference", back_populates="user", uselist=False, cascade="all, delete-orphan")

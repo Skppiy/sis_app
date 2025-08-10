@@ -1,6 +1,11 @@
 from pydantic import BaseModel, EmailStr
-from typing import Optional
+from typing import Optional, List
 from uuid import UUID
+
+class UserRoleInfo(BaseModel):
+    role: str
+    school_name: str
+    is_active: bool
 
 class UserCreate(BaseModel):
     email: EmailStr
@@ -15,8 +20,8 @@ class UserOut(BaseModel):
     email: EmailStr
     first_name: str
     last_name: str
-    role: str
     is_active: bool
+    roles: List[UserRoleInfo] = []
 
     class Config:
         orm_mode = True

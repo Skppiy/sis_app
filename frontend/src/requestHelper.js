@@ -21,6 +21,7 @@ export async function apiGet(path) {
   const res = await fetch(`${API_BASE}${path}`, {
     headers: { "Accept": "application/json", ...authHeaders() },
   });
+  if (res.status === 401) { logout(); throw new Error('Unauthorized'); }
   if (!res.ok) throw await res.json().catch(() => ({ detail: res.statusText }));
   return res.json();
 }
@@ -34,6 +35,7 @@ export async function apiPost(path, body) {
     },
     body: JSON.stringify(body),
   });
+  if (res.status === 401) { logout(); throw new Error('Unauthorized'); }
   if (!res.ok) throw await res.json().catch(() => ({ detail: res.statusText }));
   return res.json();
 }

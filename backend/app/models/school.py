@@ -1,6 +1,7 @@
 from sqlalchemy.orm import Mapped, mapped_column
 from sqlalchemy import String
 from sqlalchemy.dialects.postgresql import UUID
+from sqlalchemy.orm import relationship
 import uuid
 from .base import Base
 
@@ -14,4 +15,7 @@ class School(Base):
     state: Mapped[str | None] = mapped_column(String, nullable=True)
     zip_code: Mapped[str | None] = mapped_column(String, nullable=True)
     tz: Mapped[str] = mapped_column(String, nullable=False)
+    
+    # Relationships
+    user_roles = relationship("UserRole", back_populates="school", cascade="all, delete-orphan")
 

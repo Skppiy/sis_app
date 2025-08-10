@@ -2,14 +2,10 @@ import { BrowserRouter, Routes, Route, Navigate, Link } from "react-router-dom";
 import Home from "./pages/Home.jsx";
 import Dashboard from "./pages/Dashboard.jsx";
 import Login from "./Login.jsx";
+import Admin from "./pages/Admin.jsx";
 import Header from "./components/Header.jsx";
 import Footer from "./components/Footer.jsx";
-import { getToken } from "./requestHelper.js";
-import Admin from "./pages/Admin.jsx";
-
-function Protected({ children }) {
-  return getToken() ? children : <Navigate to="/login" replace />;
-}
+import ProtectedRoute from "./ProtectedRoute.jsx";
 
 export default function App() {
   return (
@@ -23,28 +19,21 @@ export default function App() {
         <div className="container">
           <Link to="/">🏠 Home</Link>
           <Link to="/dashboard">📊 Dashboard</Link>
-          <Link to="/login">🔐 Login</Link>
           <Link to="/admin">⚙️ Admin</Link>
+          <Link to="/login">🔐 Login</Link>
         </div>
       </nav>
       <main style={{ minHeight: 'calc(100vh - 200px)', padding: '20px 0' }}>
         <Routes>
           <Route path="/" element={<Home />} />
           <Route path="/login" element={<Login />} />
-          <Route
-            path="/dashboard"
-            element={
-              <Protected>
-                <Dashboard />
-              </Protected>
-            }
-          />
+          <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
           <Route
             path="/admin"
             element={
-              <Protected>
+              <ProtectedRoute requireRole="admin">
                 <Admin />
-              </Protected>
+              </ProtectedRoute>
             }
           />
           <Route path="*" element={<Navigate to="/" replace />} />

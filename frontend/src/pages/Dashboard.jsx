@@ -1,7 +1,109 @@
 import { useEffect, useState } from "react";
 import { apiGet } from "../requestHelper";
+import { useAuth } from "../AuthContext";
+
+function AdminDashboard() {
+  const [data, setData] = useState(null);
+  const [err, setErr] = useState("");
+  useEffect(() => {
+    apiGet("/dashboard/admin_overview").then(setData).catch(e => setErr(e?.detail || e?.message || "Failed"));
+  }, []);
+  return (
+    <div className="card">
+      <h2 className="section-title">Admin Dashboard</h2>
+      {err && <div className="card error">{err}</div>}
+      {!data ? <div>Loading…</div> : (
+        <div style={{ display: 'grid', gap: 12 }}>
+          <div style={{ display: 'flex', gap: 12 }}>
+            <div className="card" style={{ flex: 1 }}>
+              <div style={{ fontSize: 12, color: '#718096' }}>Total Users</div>
+              <div style={{ fontSize: 24, fontWeight: 700 }}>{data.total_users}</div>
+            </div>
+            <div className="card" style={{ flex: 1 }}>
+              <div style={{ fontSize: 12, color: '#718096' }}>Total Schools</div>
+              <div style={{ fontSize: 24, fontWeight: 700 }}>{data.total_schools}</div>
+            </div>
+          </div>
+          <div className="card">
+            <div className="section-title">Roles Summary</div>
+            <ul>
+              {data.roles_summary.map(r => (
+                <li key={r.role}>{r.role}: {r.count}</li>
+              ))}
+            </ul>
+          </div>
+          <div className="card">
+            <div className="section-title">Recent Users</div>
+            <ul>
+              {data.recent_users.map(u => (
+                <li key={u.id}>{u.name} — {u.email}</li>
+              ))}
+            </ul>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function TeacherDashboard() {
+  const [data, setData] = useState(null);
+  const [err, setErr] = useState("");
+  useEffect(() => {
+    apiGet("/dashboard/teacher_overview").then(setData).catch(e => setErr(e?.detail || e?.message || "Failed"));
+  }, []);
+  return (
+    <div className="card">
+      <h2 className="section-title">Teacher Dashboard</h2>
+      {err && <div className="card error">{err}</div>}
+      {!data ? <div>Loading…</div> : (
+        <div style={{ display: 'grid', gap: 12 }}>
+          <div className="card">
+            <div className="section-title">My Schools</div>
+            <ul>{data.schools.map(s => (<li key={s.id}>{s.name}</li>))}</ul>
+          </div>
+          <div className="card">
+            <div className="section-title">Colleagues</div>
+            <ul>{data.colleagues.map(c => (<li key={c.id}>{c.name} — {c.email}</li>))}</ul>
+          </div>
+          <div className="card">
+            <div className="section-title">Admin Contacts</div>
+            <ul>{data.admins.map(a => (<li key={a.id}>{a.name} — {a.email}</li>))}</ul>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function ParentDashboard() {
+  const [data, setData] = useState(null);
+  const [err, setErr] = useState("");
+  useEffect(() => {
+    apiGet("/dashboard/parent_overview").then(setData).catch(e => setErr(e?.detail || e?.message || "Failed"));
+  }, []);
+  return (
+    <div className="card">
+      <h2 className="section-title">Parent Dashboard</h2>
+      {err && <div className="card error">{err}</div>}
+      {!data ? <div>Loading…</div> : (
+        <div style={{ display: 'grid', gap: 12 }}>
+          <div className="card">
+            <div className="section-title">My Schools</div>
+            <ul>{data.schools.map(s => (<li key={s.id}>{s.name}</li>))}</ul>
+          </div>
+          <div className="card">
+            <div className="section-title">Admin Contacts</div>
+            <ul>{data.admins.map(a => (<li key={a.id}>{a.name} — {a.email}</li>))}</ul>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
 
 export default function Dashboard() {
+  const { user, active_role } = useAuth();
   const [me, setMe] = useState(null);
   const [schools, setSchools] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -51,12 +153,19 @@ export default function Dashboard() {
     <div className="container">
       <div className="card">
         <h1 className="welcome-title">
-          Welcome{me?.user ? `, ${me.user.first_name || me.user.email}` : ""}! 👋
+          Welcome{user ? `, ${user.first_name || user.email}` : ""}! 👋
         </h1>
         <p style={{ color: '#718096', fontSize: '1.1rem' }}>
           Manage your schools and students from your personalized dashboard.
         </p>
       </div>
+
+      {active_role && (
+        (active_role.includes('admin') ? <AdminDashboard />
+         : active_role.includes('teacher') ? <TeacherDashboard />
+         : active_role.includes('parent') ? <ParentDashboard />
+         : null)
+      )}
 
       <div className="card">
         <h2 className="section-title">Your Schools</h2>
