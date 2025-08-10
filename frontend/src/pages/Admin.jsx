@@ -79,7 +79,7 @@ export default function Admin() {
 
   async function loadStudents() {
     try {
-      const data = await apiGet(active_school ? `/students?school_id=${active_school}` : '/students');
+      const data = await apiGet(active_school ? `/students/with_teachers?school_id=${active_school}` : '/students/with_teachers');
       setStudents(data);
     } catch (e) {
       console.error("Failed to load students", e);
@@ -119,6 +119,16 @@ export default function Admin() {
       loadStudents();
     } catch (e) {
       console.error("Failed to create student", e);
+    }
+  }
+
+  async function assignTeacher(studentId, teacherUserId) {
+    if (!teacherUserId) return;
+    try {
+      await apiPost(`/students/assign_teacher?student_id=${studentId}&teacher_user_id=${teacherUserId}`, {});
+      await loadStudents();
+    } catch (e) {
+      console.error('Failed to assign teacher', e);
     }
   }
 
@@ -385,6 +395,8 @@ export default function Admin() {
                 <tr style={{ borderBottom: '2px solid #e2e8f0' }}>
                   <th style={{ textAlign: 'left', padding: 12 }}>Name</th>
                   <th style={{ textAlign: 'left', padding: 12 }}>Email</th>
+                  <th style={{ textAlign: 'left', padding: 12 }}>Teacher</th>
+                  <th style={{ textAlign: 'left', padding: 12 }}>Assign</th>
                 </tr>
               </thead>
               <tbody>
@@ -392,6 +404,23 @@ export default function Admin() {
                   <tr key={st.id} style={{ borderBottom: '1px solid #e2e8f0' }}>
                     <td style={{ padding: 12 }}>{st.first_name} {st.last_name}</td>
                     <td style={{ padding: 12 }}>{st.email || <span style={{ color: '#718096' }}>—</span>}</td>
+                    <td style={{ padding: 12 }}>
+                      {st.teacher_name ? (
+                        <span>{st.teacher_name} {st.teacher_email ? `— ${st.teacher_email}` : ''}</span>
+                      ) : (
+                        <span style={{ color: '#718096' }}>—</span>
+                      )}
+                    </td>
+                    <td style={{ padding: 12 }}>
+                      <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+                        <select value={st.teacher_user_id || ''} onChange={(e)=>assignTeacher(st.id, e.target.value)} style={{ padding: 6 }}>
+                          <option value="">Select teacher…</option>
+                          {teachers.map(t => (
+                            <option key={t.id} value={t.id}>{t.first_name} {t.last_name} — {t.email}</option>
+                          ))}
+                        </select>
+                      </div>
+                    </td>
                   </tr>
                 ))}
               </tbody>

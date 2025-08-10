@@ -63,6 +63,18 @@ function TeacherDashboard() {
             <ul>{data.schools.map(s => (<li key={s.id}>{s.name}</li>))}</ul>
           </div>
           <div className="card">
+            <div className="section-title">My Students</div>
+            {data.students && data.students.length > 0 ? (
+              <ul>
+                {data.students.map(st => (
+                  <li key={st.id}>{st.name} {st.email ? `— ${st.email}` : ''}</li>
+                ))}
+              </ul>
+            ) : (
+              <div style={{ color: '#718096' }}>No students yet.</div>
+            )}
+          </div>
+          <div className="card">
             <div className="section-title">Colleagues</div>
             <ul>{data.colleagues.map(c => (<li key={c.id}>{c.name} — {c.email}</li>))}</ul>
           </div>

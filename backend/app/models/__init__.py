@@ -3,6 +3,7 @@ from .user import User  # noqa
 from .school import School  # noqa
 from .user_role import UserRole
 from .user_role_preference import UserRolePreference
+from .school_year import SchoolYear
 from .student import Student
 from .classroom import Classroom
 from .enrollment import Enrollment
