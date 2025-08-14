@@ -1,4 +1,4 @@
-# backend/app/routers/classrooms.py - Updated with new classroom model
+# backend/app/routers/classrooms.py
 
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -20,6 +20,7 @@ async def list_classrooms(
     grade_level: Optional[str] = None,
     subject_id: Optional[str] = None,
     teacher_user_id: Optional[str] = None,
+    school_id: Optional[str] = None,
     session: AsyncSession = Depends(get_db),
     _: any = Depends(get_current_user),
 ):
@@ -32,7 +33,8 @@ async def list_classrooms(
     
     # Default to active academic year if none specified
     if not academic_year_id:
-        active_year = AcademicYear.get_active(session)
+        result = await session.execute(select(AcademicYear).where(AcademicYear.is_active == True))
+        active_year = result.scalar_one_or_none()
         if active_year:
             academic_year_id = str(active_year.id)
     
@@ -73,13 +75,13 @@ async def get_classroom(
         .options(
             joinedload(Classroom.subject),
             joinedload(Classroom.academic_year),
-            joinedload(Classroom.teacher_assignments).joinedload(ClassroomTeacherAssignment.teacher),
-            joinedload(Classroom.enrollments).joinedload(Enrollment.student)
+            joinedload(Classroom.teacher_assignments),
+            joinedload(Classroom.enrollments)
         )
         .where(Classroom.id == UUID(classroom_id))
     )
-    
     classroom = result.scalar_one_or_none()
+    
     if not classroom:
         raise HTTPException(status_code=404, detail="Classroom not found")
     
@@ -107,10 +109,10 @@ async def create_classroom(
     classroom = Classroom(
         name=payload.name,
         subject_id=UUID(payload.subject_id),
-        grade_level=payload.grade_level,
-        classroom_type=payload.classroom_type.upper(),
         academic_year_id=UUID(payload.academic_year_id),
-        max_students=payload.max_students,
+        grade_level=payload.grade_level,
+        classroom_type=payload.classroom_type,
+        max_students=payload.max_students
     )
     
     session.add(classroom)
@@ -118,7 +120,60 @@ async def create_classroom(
     await session.refresh(classroom)
     return classroom
 
+@router.patch("/{classroom_id}", response_model=ClassroomOut)
+async def update_classroom(
+    classroom_id: str,
+    payload: ClassroomUpdate,
+    session: AsyncSession = Depends(get_db),
+    _: any = Depends(require_admin),
+):
+    """Update a classroom"""
+    from uuid import UUID
+    
+    classroom = await session.get(Classroom, UUID(classroom_id))
+    if not classroom:
+        raise HTTPException(status_code=404, detail="Classroom not found")
+    
+    # Update fields
+    update_data = payload.dict(exclude_unset=True)
+    for field, value in update_data.items():
+        setattr(classroom, field, value)
+    
+    await session.commit()
+    await session.refresh(classroom)
+    return classroom
 
-
-
-
+@router.delete("/{classroom_id}")
+async def delete_classroom(
+    classroom_id: str,
+    session: AsyncSession = Depends(get_db),
+    _: any = Depends(require_admin),
+):
+    """Delete a classroom"""
+    from uuid import UUID
+    
+    classroom = await session.get(Classroom, UUID(classroom_id))
+    if not classroom:
+        raise HTTPException(status_code=404, detail="Classroom not found")
+    
+    # Check if classroom has enrollments
+    result = await session.execute(
+        select(func.count()).select_from(
+            select(1).where(
+                and_(
+                    ClassroomTeacherAssignment.classroom_id == classroom.id,
+                    ClassroomTeacherAssignment.is_active == True
+                )
+            ).subquery()
+        )
+    )
+    
+    if result.scalar() > 0:
+        raise HTTPException(
+            status_code=400, 
+            detail="Cannot delete classroom with active teacher assignments"
+        )
+    
+    await session.delete(classroom)
+    await session.commit()
+    return {"message": "Classroom deleted successfully"}

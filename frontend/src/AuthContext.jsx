@@ -1,7 +1,5 @@
-backend/AuthContext.jsx - Updated to include academic year context
-
 import { createContext, useContext, useState, useEffect } from 'react';
-import { apiGet, getToken, logout as logoutHelper } from './requestHelper';
+import { apiGet, getToken, logout as logoutHelper } from './requestHelper.js';
 
 const AuthContext = createContext();
 

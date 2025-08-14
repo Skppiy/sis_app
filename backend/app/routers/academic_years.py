@@ -1,8 +1,6 @@
-# backend/app/routers/academic_years.py
-
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select, func
+from sqlalchemy import select, func, update
 from typing import List
 from ..deps import get_db, require_admin, get_current_user
 from ..models.academic_year import AcademicYear
@@ -27,7 +25,8 @@ async def get_active_academic_year(
     _: any = Depends(get_current_user),
 ):
     """Get the currently active academic year"""
-    active_year = AcademicYear.get_active(session)
+    result = await session.execute(select(AcademicYear).where(AcademicYear.is_active == True))
+    active_year = result.scalar_one_or_none()
     if not active_year:
         raise HTTPException(status_code=404, detail="No active academic year found")
     return active_year
@@ -44,24 +43,32 @@ async def create_academic_year(
         raise HTTPException(status_code=400, detail="End date must be after start date")
     
     # Auto-generate short name if not provided
-    if not payload.short_name:
-        short_name = payload.generate_short_name()
+    if not hasattr(payload, 'short_name') or not payload.short_name:
+        # Simple short name generation: "2024-2025" -> "24-25"
+        if '-' in payload.name:
+            years = payload.name.split('-')
+            if len(years) == 2 and len(years[0]) == 4 and len(years[1]) == 4:
+                short_name = f"{years[0][-2:]}-{years[1][-2:]}"
+            else:
+                short_name = payload.name[:5]
+        else:
+            short_name = payload.name[:5]
     else:
         short_name = payload.short_name
+    
+    # If setting as active, deactivate other years first
+    if hasattr(payload, 'is_active') and payload.is_active:
+        await session.execute(
+            update(AcademicYear).values(is_active=False).where(AcademicYear.is_active == True)
+        )
     
     academic_year = AcademicYear(
         name=payload.name,
         short_name=short_name,
         start_date=payload.start_date,
         end_date=payload.end_date,
-        is_active=payload.is_active or False
+        is_active=getattr(payload, 'is_active', False)
     )
-    
-    # If setting as active, deactivate other years
-    if academic_year.is_active:
-        await session.execute(
-            update(AcademicYear).values(is_active=False).where(AcademicYear.is_active == True)
-        )
     
     session.add(academic_year)
     await session.commit()

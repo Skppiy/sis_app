@@ -40,6 +40,36 @@ export async function apiPost(path, body) {
   return res.json();
 }
 
+export async function apiPatch(path, body) {
+  const res = await fetch(`${API_BASE}${path}`, {
+    method: "PATCH",
+    headers: {
+      "Content-Type": "application/json",
+      ...authHeaders(),
+    },
+    body: JSON.stringify(body),
+  });
+  if (res.status === 401) { logout(); throw new Error('Unauthorized'); }
+  if (!res.ok) throw await res.json().catch(() => ({ detail: res.statusText }));
+  return res.json();
+}
+
+export async function apiDelete(path) {
+  const res = await fetch(`${API_BASE}${path}`, {
+    method: "DELETE",
+    headers: {
+      "Accept": "application/json",
+      ...authHeaders(),
+    },
+  });
+  if (res.status === 401) { logout(); throw new Error('Unauthorized'); }
+  if (!res.ok) throw await res.json().catch(() => ({ detail: res.statusText }));
+  
+  // DELETE requests might return empty response
+  if (res.status === 204) return {};
+  return res.json();
+}
+
 // FastAPI OAuth2 password flow expects x-www-form-urlencoded with username/password
 export async function login(email, password) {
   const body = new URLSearchParams();
