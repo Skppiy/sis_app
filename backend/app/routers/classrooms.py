@@ -12,7 +12,7 @@ from ..models.academic_year import AcademicYear
 from ..models.subject import Subject
 from ..schemas.classroom import ClassroomCreate, ClassroomOut, ClassroomUpdate, ClassroomWithDetails
 
-router = APIRouter(prefix="/classrooms", tags=["classrooms"])
+router = APIRouter(tags=["classrooms"])
 
 @router.get("", response_model=List[ClassroomOut])
 async def list_classrooms(

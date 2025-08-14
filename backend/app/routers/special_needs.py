@@ -15,7 +15,7 @@ from ..schemas.special_needs import (
     StudentSpecialNeedCreate, StudentSpecialNeedOut, StudentSpecialNeedUpdate
 )
 
-router = APIRouter(prefix="/special-needs", tags=["special-needs"])
+router = APIRouter(tags=["special-needs"])
 
 # Tag Library Management
 @router.get("/tags", response_model=List[SpecialNeedsTagOut])

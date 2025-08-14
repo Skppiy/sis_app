@@ -12,7 +12,7 @@ from ..security import verify_password, create_access_token
 from ..schemas.auth import Token
 from ..schemas.user import UserOut
 
-router = APIRouter(prefix="/auth", tags=["auth"])
+router = APIRouter(tags=["auth"])
 
 @router.post('/login', response_model=Token)
 async def login(form_data: OAuth2PasswordRequestForm = Depends(), session: AsyncSession = Depends(get_session)):

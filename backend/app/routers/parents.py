@@ -18,7 +18,7 @@ from ..schemas.parent import (
 )
 from ..security import get_password_hash
 
-router = APIRouter(prefix="/parents", tags=["parents"])
+router = APIRouter(tags=["parents"])
 
 @router.get("", response_model=List[ParentOut])
 async def list_parents(

@@ -8,7 +8,7 @@ from ..deps import get_db, require_admin, get_current_user
 from ..models.subject import Subject
 from ..schemas.subject import SubjectCreate, SubjectOut, SubjectUpdate
 
-router = APIRouter(prefix="/subjects", tags=["subjects"])
+router = APIRouter(tags=["subjects"])
 
 @router.get("", response_model=List[SubjectOut])
 async def list_subjects(

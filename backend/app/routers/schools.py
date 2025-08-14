@@ -6,7 +6,7 @@ from ..deps import get_db, require_admin, get_current_user
 from ..models.school import School
 from ..schemas.school import SchoolCreate, SchoolOut, SchoolUpdate
 
-router = APIRouter(prefix="/schools", tags=["schools"])
+router = APIRouter(tags=["schools"])
 
 @router.get("", response_model=List[SchoolOut])
 async def list_schools(

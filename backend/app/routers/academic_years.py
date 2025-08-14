@@ -6,7 +6,7 @@ from ..deps import get_db, require_admin, get_current_user
 from ..models.academic_year import AcademicYear
 from ..schemas.academic_year import AcademicYearCreate, AcademicYearOut, AcademicYearUpdate
 
-router = APIRouter(prefix="/academic-years", tags=["academic-years"])
+router = APIRouter(tags=["academic-years"])
 
 @router.get("", response_model=List[AcademicYearOut])
 async def list_academic_years(
