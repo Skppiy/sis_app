@@ -1,0 +1,17 @@
+5aaa32fb-d845-49d7-8ae5-1ec63c7ed2af
+
+1) Activate venv
+cd D:\sis_app\backend
+.\.venv\Scripts\Activate.ps1
+2) Set PYTHONPATH for Alembic
+$env:PYTHONPATH = "."
+3) Apply migrations
+python -m alembic upgrade head
+4) Start the server
+uvicorn app.main:app --reload --port 8000
+Verify:
+Open http://localhost:8000/health (should return {"status":"ok"})
+
+
+
+http://localhost:8000/docs
