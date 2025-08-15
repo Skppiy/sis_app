@@ -1,5 +1,6 @@
+
 // frontend/src/pages/Admin.jsx
-// Main admin page - now using modular components
+// Main admin page using modular AdminLayout
 
 import AdminLayout from "../components/admin/AdminLayout";
 
