@@ -8,7 +8,7 @@ from ..deps import get_db, require_admin, get_current_user
 from ..models.room import Room
 from ..schemas.room import RoomCreate, RoomOut, RoomUpdate
 
-router = APIRouter(prefix="/rooms", tags=["rooms"])
+router = APIRouter(tags=["rooms"])
 
 @router.get("", response_model=List[RoomOut])
 async def list_rooms(

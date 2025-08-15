@@ -11,7 +11,7 @@ from ..security import get_password_hash
 from ..models.user_role import UserRole
 from ..models.user import User
 
-router = APIRouter(prefix="/admin", tags=["admin"])
+router = APIRouter(tags=["admin"])
 
 @router.get("/test")
 async def test_admin_access(user: User = Depends(get_current_user), session: AsyncSession = Depends(get_db)):
