@@ -61,29 +61,59 @@ async def list_classrooms(
     
     return classrooms
 
-@router.get("/{classroom_id}", response_model=ClassroomWithDetails)
-async def get_classroom(
-    classroom_id: str,
+@router.get("", response_model=List[ClassroomOut])
+async def list_classrooms(
+    academic_year_id: Optional[str] = None,
+    subject_id: Optional[str] = None,
+    teacher_user_id: Optional[str] = None,
     session: AsyncSession = Depends(get_db),
     _: any = Depends(get_current_user),
 ):
-    """Get detailed classroom information including enrollments and teachers"""
-    result = await session.execute(
-        select(Classroom)
-        .options(
-            joinedload(Classroom.subject),
-            joinedload(Classroom.academic_year),
-            joinedload(Classroom.room),  # FIXED: Load room relationship
-            selectinload(Classroom.teacher_assignments).joinedload(ClassroomTeacherAssignment.teacher)
-        )
-        .where(Classroom.id == UUID(classroom_id))
+    """List classrooms with optional filtering - DEBUG VERSION"""
+    print("🔍 DEBUG: Starting list_classrooms")
+    
+    query = select(Classroom).options(
+        joinedload(Classroom.subject),
+        joinedload(Classroom.academic_year),
+        joinedload(Classroom.room),
+        selectinload(Classroom.teacher_assignments).joinedload(ClassroomTeacherAssignment.teacher)
     )
     
-    classroom = result.scalar_one_or_none()
-    if not classroom:
-        raise HTTPException(status_code=404, detail="Classroom not found")
+    if academic_year_id:
+        query = query.where(Classroom.academic_year_id == UUID(academic_year_id))
     
-    return classroom
+    if subject_id:
+        query = query.where(Classroom.subject_id == UUID(subject_id))
+    
+    if teacher_user_id:
+        query = query.join(ClassroomTeacherAssignment).where(
+            and_(
+                ClassroomTeacherAssignment.teacher_user_id == UUID(teacher_user_id),
+                ClassroomTeacherAssignment.is_active == True
+            )
+        )
+    
+    result = await session.execute(query)
+    classrooms = result.scalars().all()
+    
+    print(f"🔍 DEBUG: Found {len(classrooms)} classrooms")
+    
+    for i, classroom in enumerate(classrooms):
+        print(f"🔍 DEBUG: Classroom {i+1}: {classroom.name}")
+        print(f"   - Teacher assignments count: {len(classroom.teacher_assignments) if classroom.teacher_assignments else 0}")
+        
+        if classroom.teacher_assignments:
+            for j, ta in enumerate(classroom.teacher_assignments):
+                print(f"   - Assignment {j+1}: Role={ta.role_name}, Active={ta.is_active}")
+                print(f"     Teacher: {ta.teacher.first_name if ta.teacher else 'None'} {ta.teacher.last_name if ta.teacher else ''}")
+        else:
+            print("   - No teacher assignments found!")
+        
+        # Set enrollment count
+        classroom.enrollment_count = 0
+    
+    print("🔍 DEBUG: Returning classrooms")
+    return classrooms
 
 @router.post("", response_model=ClassroomOut, status_code=status.HTTP_201_CREATED)
 async def create_classroom(

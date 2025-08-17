@@ -1,5 +1,5 @@
 # backend/app/schemas/classroom.py
-# Fixed to include room_id and room information
+# Fixed to include teacher_assignments without circular references
 
 from pydantic import BaseModel
 from typing import Optional, List
@@ -26,10 +26,20 @@ class ClassroomUpdate(BaseModel):
     max_students: Optional[int] = None
     room_id: Optional[str] = None  # ADDED: Room update
 
+class TeacherInfo(BaseModel):
+    """Simple teacher info for display purposes"""
+    id: UUID
+    first_name: str
+    last_name: str
+    email: str
+
+    class Config:
+        orm_mode = True
+        from_attributes = True
+
 class TeacherAssignmentOut(BaseModel):
     id: UUID
     teacher_user_id: UUID
-    teacher_name: str
     role_name: str
     can_view_grades: bool
     can_modify_grades: bool
@@ -37,6 +47,9 @@ class TeacherAssignmentOut(BaseModel):
     can_view_parent_contact: bool
     can_create_assignments: bool
     is_active: bool
+    
+    # Teacher information - use the simple TeacherInfo to avoid circular reference
+    teacher: Optional[TeacherInfo] = None
 
     class Config:
         orm_mode = True
@@ -50,6 +63,7 @@ class ClassroomOut(ClassroomBase):
     subject: Optional[SubjectOut] = None
     academic_year: Optional[AcademicYearOut] = None
     room: Optional[RoomOut] = None  # ADDED: Room details
+    teacher_assignments: List[TeacherAssignmentOut] = []  # ADDED: Teacher assignments
     enrollment_count: int = 0
 
     class Config:
@@ -57,8 +71,8 @@ class ClassroomOut(ClassroomBase):
         from_attributes = True
 
 class ClassroomWithDetails(ClassroomOut):
-    teacher_assignments: List[TeacherAssignmentOut] = []
     # enrollments: List[EnrollmentOut] = []  # Will add when we create enrollment schema
+    pass
 
     class Config:
         orm_mode = True
