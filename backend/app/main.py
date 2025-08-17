@@ -1,4 +1,4 @@
-# backend/app/main.py - Correct version with prefixes added in include_router
+# backend/app/main.py - Original working version
 
 from fastapi import FastAPI, Depends
 from fastapi.middleware.cors import CORSMiddleware
@@ -19,7 +19,7 @@ from .routers import parents as parents_router
 
 app = FastAPI(title="SIS API - Phase A")
 
-# Fixed CORS middleware
+# Original CORS middleware
 app.add_middleware(
     CORSMiddleware,
     allow_origins=[
@@ -38,7 +38,7 @@ async def health(session: AsyncSession = Depends(get_session)):
     await session.execute(text("SELECT 1"))
     return {"status": "ok"}
 
-# Include routers with prefixes added HERE (not in router definitions)
+# Include routers with prefixes
 app.include_router(auth_router.router, prefix="/auth")
 app.include_router(schools_router.router, prefix="/schools")
 app.include_router(admin_router.router, prefix="/admin")

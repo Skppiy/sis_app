@@ -1,5 +1,5 @@
 // frontend/src/components/admin/AdminLayout.jsx
-// Fixed admin orchestrator with proper prop passing
+// Updated admin orchestrator with proper student tab integration
 
 import { useState, useEffect } from "react";
 import { apiGet } from "../../requestHelper";
@@ -7,6 +7,8 @@ import { useAuth } from "../../AuthContext";
 import OverviewTab from "./tabs/OverviewTab";
 import AcademicsTab from "./tabs/AcademicsTab";
 import FacilitiesTab from "./tabs/FacilitiesTab";
+import UsersTab from "./tabs/UsersTab";
+import StudentsTab from "./tabs/StudentsTab";
 
 export default function AdminLayout() {
   const { active_school } = useAuth();
@@ -173,19 +175,16 @@ export default function AdminLayout() {
         />
       )}
 
-      {/* Simple Placeholders for future tabs */}
       {tab === 'users' && (
-        <div className="card">
-          <h2 className="section-title">User Management</h2>
-          <p>User management features coming in Phase A.3</p>
-        </div>
+        <UsersTab 
+          data={data}
+        />
       )}
 
       {tab === 'students' && (
-        <div className="card">
-          <h2 className="section-title">Student Management</h2>
-          <p>Student management features coming in Phase A.4</p>
-        </div>
+        <StudentsTab 
+          data={data}
+        />
       )}
     </div>
   );

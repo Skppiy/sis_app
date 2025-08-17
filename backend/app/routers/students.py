@@ -1,4 +1,5 @@
 # backend/app/routers/students.py
+# Original working version - restore this
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 import uuid
@@ -15,7 +16,7 @@ from ..models.enrollment import Enrollment
 from ..models.academic_year import AcademicYear
 from ..schemas.student import StudentCreate, StudentOut, StudentUpdate, StudentWithDetails
 
-router = APIRouter(prefix="/students", tags=["students"])
+router = APIRouter(tags=["students"])
 
 @router.get("", response_model=List[StudentOut])
 async def list_students(
@@ -180,59 +181,7 @@ async def delete_student(
     if not student:
         raise HTTPException(status_code=404, detail="Student not found")
     
-    # Soft delete - set inactive instead of hard delete
     student.is_active = False
     await session.commit()
     
-    return {"message": "Student deactivated successfully"}
-
-@router.post("/{student_id}/enroll", response_model=dict)
-async def enroll_student_in_classroom(
-    student_id: str,
-    classroom_id: str,
-    session: AsyncSession = Depends(get_db),
-    _: any = Depends(require_admin),
-):
-    """Enroll a student in a classroom"""
-    try:
-        student_uuid = uuid.UUID(student_id)
-        classroom_uuid = uuid.UUID(classroom_id)
-    except ValueError:
-        raise HTTPException(status_code=400, detail="Invalid ID format")
-    
-    # Verify student exists
-    student = await session.get(Student, student_uuid)
-    if not student:
-        raise HTTPException(status_code=404, detail="Student not found")
-    
-    # Verify classroom exists
-    classroom = await session.get(Classroom, classroom_uuid)
-    if not classroom:
-        raise HTTPException(status_code=404, detail="Classroom not found")
-    
-    # Check if already enrolled
-    existing = await session.execute(
-        select(Enrollment).where(
-            and_(
-                Enrollment.student_id == student_uuid,
-                Enrollment.classroom_id == classroom_uuid,
-                Enrollment.is_active == True
-            )
-        )
-    )
-    if existing.scalar_one_or_none():
-        raise HTTPException(status_code=400, detail="Student already enrolled in this classroom")
-    
-    # Create enrollment
-    from datetime import date
-    enrollment = Enrollment(
-        student_id=student_uuid,
-        classroom_id=classroom_uuid,
-        enrollment_date=date.today(),
-        enrollment_status="ACTIVE"
-    )
-    
-    session.add(enrollment)
-    await session.commit()
-    
-    return {"message": "Student enrolled successfully"}
+    return {"message": "Student deleted successfully"}
