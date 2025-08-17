@@ -1,15 +1,18 @@
 // frontend/src/components/admin/student/StudentListContainer.jsx
-// Minimal test version with better error handling
+// Updated to include student creation form
 
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../../../AuthContext';
-import { apiGet } from '../../../requestHelper';
+import { StudentService } from '../../../services/studentService';
+import StudentFormModal from './StudentFormModal';
 
 export default function StudentListContainer() {
   const { active_school } = useAuth();
   const [students, setStudents] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const [showStudentForm, setShowStudentForm] = useState(false);
+  const [editingStudent, setEditingStudent] = useState(null);
 
   useEffect(() => {
     loadStudents();
@@ -20,17 +23,15 @@ export default function StudentListContainer() {
       setLoading(true);
       setError('');
       
-      // Try to load students from API, handle if endpoint doesn't exist
-      const data = await apiGet('/students' + (active_school ? `?school_id=${active_school}` : ''));
+      const data = await StudentService.getStudents(active_school);
       setStudents(data || []);
       
     } catch (err) {
       console.error('Students API error:', err);
       
-      // Check if it's a 500/404 error (API not implemented yet)
       if (err.status === 500 || err.status === 404) {
         setError('Students API not yet implemented. This is normal during Phase A.2 development.');
-        setStudents([]); // Use empty array for now
+        setStudents([]);
       } else {
         setError(`Failed to load students: ${err.message}`);
       }
@@ -40,7 +41,24 @@ export default function StudentListContainer() {
   };
 
   const handleAddStudent = () => {
-    alert('Student creation form will be implemented in the next step!');
+    setEditingStudent(null);
+    setShowStudentForm(true);
+  };
+
+  const handleEditStudent = (student) => {
+    setEditingStudent(student);
+    setShowStudentForm(true);
+  };
+
+  const handleStudentSaved = () => {
+    setShowStudentForm(false);
+    setEditingStudent(null);
+    loadStudents(); // Refresh the list
+  };
+
+  const handleFormCancel = () => {
+    setShowStudentForm(false);
+    setEditingStudent(null);
   };
 
   if (loading) {
@@ -80,7 +98,7 @@ export default function StudentListContainer() {
         </p>
       )}
       
-      {/* Always show the UI components for testing */}
+      {/* Action Buttons */}
       <div style={{ marginBottom: '16px' }}>
         <button
           onClick={handleAddStudent}
@@ -91,7 +109,9 @@ export default function StudentListContainer() {
             border: 'none',
             borderRadius: '6px',
             cursor: 'pointer',
-            marginRight: '12px'
+            marginRight: '12px',
+            fontSize: '0.875rem',
+            fontWeight: '500'
           }}
         >
           ➕ Add Student
@@ -105,13 +125,15 @@ export default function StudentListContainer() {
             color: 'white',
             border: 'none',
             borderRadius: '6px',
-            cursor: 'pointer'
+            cursor: 'pointer',
+            fontSize: '0.875rem'
           }}
         >
           🔄 Refresh
         </button>
       </div>
       
+      {/* Student List */}
       {students.length === 0 ? (
         <div style={{ 
           textAlign: 'center', 
@@ -122,43 +144,81 @@ export default function StudentListContainer() {
           border: '2px dashed #e2e8f0'
         }}>
           <div style={{ fontSize: '3rem', marginBottom: '16px' }}>🎓</div>
-          <h3 style={{ margin: '0 0 8px 0' }}>Student Management Ready!</h3>
+          <h3 style={{ margin: '0 0 8px 0' }}>
+            {error ? 'Student Management Ready!' : 'No Students Yet'}
+          </h3>
           <p style={{ margin: '0 0 16px 0' }}>
-            Frontend components are working. Ready for backend integration.
+            {error 
+              ? 'Frontend components are working. Ready for backend integration.'
+              : 'Get started by adding your first student.'
+            }
           </p>
-          <div style={{ fontSize: '0.875rem', color: '#4a5568' }}>
-            <strong>Next Steps:</strong>
-            <ul style={{ textAlign: 'left', marginTop: '8px' }}>
-              <li>✅ Frontend components loaded</li>
-              <li>🔄 Backend students API (in progress)</li>
-              <li>⏳ Student creation forms</li>
-              <li>⏳ Enrollment management</li>
-            </ul>
-          </div>
+          <button
+            onClick={handleAddStudent}
+            style={{
+              padding: '8px 16px',
+              background: '#3182ce',
+              color: 'white',
+              border: 'none',
+              borderRadius: '6px',
+              cursor: 'pointer'
+            }}
+          >
+            ➕ Add First Student
+          </button>
         </div>
       ) : (
-        <div>
-          <div style={{ display: 'grid', gap: '12px' }}>
-            {students.map((student, index) => (
-              <div 
-                key={student.id || index}
-                style={{
-                  padding: '16px',
-                  border: '1px solid #e2e8f0',
-                  borderRadius: '8px',
-                  background: '#ffffff'
-                }}
-              >
+        <div style={{ display: 'grid', gap: '12px' }}>
+          {students.map((student, index) => (
+            <div 
+              key={student.id || index}
+              style={{
+                padding: '16px',
+                border: '1px solid #e2e8f0',
+                borderRadius: '8px',
+                background: '#ffffff',
+                display: 'flex',
+                justifyContent: 'space-between',
+                alignItems: 'center'
+              }}
+            >
+              <div>
                 <div style={{ fontWeight: '600', marginBottom: '4px' }}>
                   {student.first_name} {student.last_name}
                 </div>
                 <div style={{ fontSize: '0.875rem', color: '#718096' }}>
-                  Grade {student.grade_level} • ID: {student.student_id || 'N/A'}
+                  {student.entry_grade_level && `Grade ${student.entry_grade_level}`}
+                  {student.student_id && ` • ID: ${student.student_id}`}
+                  {student.date_of_birth && ` • Born: ${student.date_of_birth}`}
                 </div>
               </div>
-            ))}
-          </div>
+              
+              <button
+                onClick={() => handleEditStudent(student)}
+                style={{
+                  padding: '6px 12px',
+                  background: '#e2e8f0',
+                  border: 'none',
+                  borderRadius: '4px',
+                  cursor: 'pointer',
+                  fontSize: '0.875rem'
+                }}
+              >
+                Edit
+              </button>
+            </div>
+          ))}
         </div>
+      )}
+
+      {/* Student Form Modal */}
+      {showStudentForm && (
+        <StudentFormModal
+          student={editingStudent}
+          existingStudents={students}
+          onSave={handleStudentSaved}
+          onCancel={handleFormCancel}
+        />
       )}
     </div>
   );

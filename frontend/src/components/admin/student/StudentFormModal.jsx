@@ -2,63 +2,54 @@
 // Student creation and editing modal
 
 import React, { useState, useEffect } from 'react';
-import { StudentService, SpecialNeedsService } from '../../../services/studentService';
-import { useAuth } from '../../../AuthContext';
+import { StudentService } from '../../../services/studentService';
 
-export default function StudentFormModal({ student, onSave, onCancel }) {
-  const { active_school } = useAuth();
+export default function StudentFormModal({ student, onSave, onCancel, existingStudents = [] }) {
   const isEditing = !!student;
   
   const [formData, setFormData] = useState({
-    first_name: '',
-    last_name: '',
-    student_id: '',
-    grade_level: '',
-    date_of_birth: '',
-    gender: '',
-    phone: '',
-    email: '',
-    address: '',
-    emergency_contact_name: '',
-    emergency_contact_phone: '',
-    medical_notes: '',
-    special_needs_tags: []
+    first_name: student?.first_name || '',
+    last_name: student?.last_name || '',
+    student_id: student?.student_id || '',
+    entry_grade_level: student?.entry_grade_level || '',
+    date_of_birth: student?.date_of_birth || '',
+    email: student?.email || '',
+    entry_date: student?.entry_date || new Date().toISOString().split('T')[0]
   });
 
-  const [specialNeedsTags, setSpecialNeedsTags] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
-  // Load form data and special needs tags
+  // Auto-generate student ID when not editing
   useEffect(() => {
-    if (student) {
-      setFormData({
-        first_name: student.first_name || '',
-        last_name: student.last_name || '',
-        student_id: student.student_id || '',
-        grade_level: student.grade_level || '',
-        date_of_birth: student.date_of_birth || '',
-        gender: student.gender || '',
-        phone: student.phone || '',
-        email: student.email || '',
-        address: student.address || '',
-        emergency_contact_name: student.emergency_contact_name || '',
-        emergency_contact_phone: student.emergency_contact_phone || '',
-        medical_notes: student.medical_notes || '',
-        special_needs_tags: student.special_needs?.map(sn => sn.tag_id) || []
-      });
+    if (!isEditing && !formData.student_id) {
+      const suggestedId = generateNextStudentId();
+      setFormData(prev => ({
+        ...prev,
+        student_id: suggestedId
+      }));
     }
+  }, [isEditing, existingStudents]);
 
-    loadSpecialNeedsTags();
-  }, [student]);
+  const generateNextStudentId = () => {
+    const currentYear = new Date().getFullYear();
+    const yearSuffix = currentYear.toString().slice(-2); // Get last 2 digits of year
+    
+    // Find existing student IDs that match the pattern (e.g., SPR1001, SPR1002)
+    const existingIds = existingStudents
+      .map(s => s.student_id)
+      .filter(id => id && id.startsWith('SPR'))
+      .map(id => {
+        const match = id.match(/SPR(\d+)/);
+        return match ? parseInt(match[1]) : 0;
+      })
+      .filter(num => num > 0);
 
-  const loadSpecialNeedsTags = async () => {
-    try {
-      const tags = await SpecialNeedsService.getTagLibrary(active_school);
-      setSpecialNeedsTags(tags);
-    } catch (err) {
-      console.error('Failed to load special needs tags:', err);
-    }
+    // Find the next available number
+    const maxId = existingIds.length > 0 ? Math.max(...existingIds) : 1000;
+    const nextId = maxId + 1;
+    
+    return `SPR${nextId}`;
   };
 
   const handleInputChange = (field, value) => {
@@ -68,43 +59,61 @@ export default function StudentFormModal({ student, onSave, onCancel }) {
     }));
   };
 
-  const handleSpecialNeedsChange = (tagId, checked) => {
-    setFormData(prev => ({
-      ...prev,
-      special_needs_tags: checked
-        ? [...prev.special_needs_tags, tagId]
-        : prev.special_needs_tags.filter(id => id !== tagId)
-    }));
-  };
-
   const handleSubmit = async (e) => {
     e.preventDefault();
     setLoading(true);
     setError('');
 
     try {
+      // Validate required fields
+      if (!formData.first_name.trim()) {
+        throw new Error('First name is required');
+      }
+      if (!formData.last_name.trim()) {
+        throw new Error('Last name is required');
+      }
+      if (!formData.entry_grade_level) {
+        throw new Error('Entry grade is required');
+      }
+
       // Prepare data for API
       const submitData = {
-        ...formData,
-        grade_level: parseInt(formData.grade_level),
-        school_id: active_school
+        first_name: formData.first_name.trim(),
+        last_name: formData.last_name.trim(),
+        student_id: formData.student_id.trim() || null,
+        entry_grade_level: formData.entry_grade_level,
+        date_of_birth: formData.date_of_birth || null,
+        email: formData.email.trim() || null,
+        entry_date: formData.entry_date || null
       };
+
+      console.log('Submitting student data:', submitData);
 
       if (isEditing) {
         await StudentService.updateStudent(student.id, submitData);
       } else {
         await StudentService.createStudent(submitData);
       }
-
       onSave();
     } catch (err) {
-      setError(`Failed to ${isEditing ? 'update' : 'create'} student: ${err.message}`);
+      console.error('Student creation error:', err);
+      setError(err.message || `Failed to ${isEditing ? 'update' : 'create'} student`);
     } finally {
       setLoading(false);
     }
   };
 
-  const grades = Array.from({ length: 13 }, (_, i) => i); // K-12
+  const grades = [
+    { value: 'K', label: 'Kindergarten' },
+    { value: '1', label: 'Grade 1' },
+    { value: '2', label: 'Grade 2' },
+    { value: '3', label: 'Grade 3' },
+    { value: '4', label: 'Grade 4' },
+    { value: '5', label: 'Grade 5' },
+    { value: '6', label: 'Grade 6' },
+    { value: '7', label: 'Grade 7' },
+    { value: '8', label: 'Grade 8' }
+  ];
 
   return (
     <div style={{
@@ -124,7 +133,7 @@ export default function StudentFormModal({ student, onSave, onCancel }) {
         borderRadius: '8px',
         padding: '24px',
         width: '90%',
-        maxWidth: '600px',
+        maxWidth: '500px',
         maxHeight: '90vh',
         overflow: 'auto'
       }}>
@@ -164,280 +173,169 @@ export default function StudentFormModal({ student, onSave, onCancel }) {
         )}
 
         <form onSubmit={handleSubmit}>
-          {/* Basic Information */}
-          <div style={{ marginBottom: '24px' }}>
-            <h3 style={{ marginBottom: '16px', color: '#2d3748' }}>Basic Information</h3>
-            
-            <div style={{ 
-              display: 'grid', 
-              gridTemplateColumns: '1fr 1fr', 
-              gap: '16px',
-              marginBottom: '16px'
-            }}>
-              <div>
-                <label style={{ display: 'block', marginBottom: '4px', fontWeight: '500' }}>
-                  First Name *
-                </label>
-                <input
-                  type="text"
-                  required
-                  value={formData.first_name}
-                  onChange={(e) => handleInputChange('first_name', e.target.value)}
-                  style={{
-                    width: '100%',
-                    padding: '8px 12px',
-                    border: '1px solid #e2e8f0',
-                    borderRadius: '6px'
-                  }}
-                />
-              </div>
-              
-              <div>
-                <label style={{ display: 'block', marginBottom: '4px', fontWeight: '500' }}>
-                  Last Name *
-                </label>
-                <input
-                  type="text"
-                  required
-                  value={formData.last_name}
-                  onChange={(e) => handleInputChange('last_name', e.target.value)}
-                  style={{
-                    width: '100%',
-                    padding: '8px 12px',
-                    border: '1px solid #e2e8f0',
-                    borderRadius: '6px'
-                  }}
-                />
-              </div>
-            </div>
-
-            <div style={{ 
-              display: 'grid', 
-              gridTemplateColumns: '1fr 1fr 1fr', 
-              gap: '16px',
-              marginBottom: '16px'
-            }}>
-              <div>
-                <label style={{ display: 'block', marginBottom: '4px', fontWeight: '500' }}>
-                  Student ID
-                </label>
-                <input
-                  type="text"
-                  value={formData.student_id}
-                  onChange={(e) => handleInputChange('student_id', e.target.value)}
-                  style={{
-                    width: '100%',
-                    padding: '8px 12px',
-                    border: '1px solid #e2e8f0',
-                    borderRadius: '6px'
-                  }}
-                />
-              </div>
-              
-              <div>
-                <label style={{ display: 'block', marginBottom: '4px', fontWeight: '500' }}>
-                  Grade Level *
-                </label>
-                <select
-                  required
-                  value={formData.grade_level}
-                  onChange={(e) => handleInputChange('grade_level', e.target.value)}
-                  style={{
-                    width: '100%',
-                    padding: '8px 12px',
-                    border: '1px solid #e2e8f0',
-                    borderRadius: '6px'
-                  }}
-                >
-                  <option value="">Select Grade</option>
-                  {grades.map(grade => (
-                    <option key={grade} value={grade}>
-                      {grade === 0 ? 'Kindergarten' : `Grade ${grade}`}
-                    </option>
-                  ))}
-                </select>
-              </div>
-              
-              <div>
-                <label style={{ display: 'block', marginBottom: '4px', fontWeight: '500' }}>
-                  Date of Birth
-                </label>
-                <input
-                  type="date"
-                  value={formData.date_of_birth}
-                  onChange={(e) => handleInputChange('date_of_birth', e.target.value)}
-                  style={{
-                    width: '100%',
-                    padding: '8px 12px',
-                    border: '1px solid #e2e8f0',
-                    borderRadius: '6px'
-                  }}
-                />
-              </div>
-            </div>
-          </div>
-
-          {/* Contact Information */}
-          <div style={{ marginBottom: '24px' }}>
-            <h3 style={{ marginBottom: '16px', color: '#2d3748' }}>Contact Information</h3>
-            
-            <div style={{ 
-              display: 'grid', 
-              gridTemplateColumns: '1fr 1fr', 
-              gap: '16px',
-              marginBottom: '16px'
-            }}>
-              <div>
-                <label style={{ display: 'block', marginBottom: '4px', fontWeight: '500' }}>
-                  Phone
-                </label>
-                <input
-                  type="tel"
-                  value={formData.phone}
-                  onChange={(e) => handleInputChange('phone', e.target.value)}
-                  style={{
-                    width: '100%',
-                    padding: '8px 12px',
-                    border: '1px solid #e2e8f0',
-                    borderRadius: '6px'
-                  }}
-                />
-              </div>
-              
-              <div>
-                <label style={{ display: 'block', marginBottom: '4px', fontWeight: '500' }}>
-                  Email
-                </label>
-                <input
-                  type="email"
-                  value={formData.email}
-                  onChange={(e) => handleInputChange('email', e.target.value)}
-                  style={{
-                    width: '100%',
-                    padding: '8px 12px',
-                    border: '1px solid #e2e8f0',
-                    borderRadius: '6px'
-                  }}
-                />
-              </div>
-            </div>
-
-            <div style={{ marginBottom: '16px' }}>
+          {/* Name Fields */}
+          <div style={{ 
+            display: 'grid', 
+            gridTemplateColumns: '1fr 1fr', 
+            gap: '16px',
+            marginBottom: '16px'
+          }}>
+            <div>
               <label style={{ display: 'block', marginBottom: '4px', fontWeight: '500' }}>
-                Address
+                First Name *
               </label>
-              <textarea
-                value={formData.address}
-                onChange={(e) => handleInputChange('address', e.target.value)}
-                rows={2}
+              <input
+                type="text"
+                required
+                value={formData.first_name}
+                onChange={(e) => handleInputChange('first_name', e.target.value)}
                 style={{
                   width: '100%',
                   padding: '8px 12px',
                   border: '1px solid #e2e8f0',
                   borderRadius: '6px',
-                  resize: 'vertical'
+                  fontSize: '0.875rem'
+                }}
+              />
+            </div>
+            
+            <div>
+              <label style={{ display: 'block', marginBottom: '4px', fontWeight: '500' }}>
+                Last Name *
+              </label>
+              <input
+                type="text"
+                required
+                value={formData.last_name}
+                onChange={(e) => handleInputChange('last_name', e.target.value)}
+                style={{
+                  width: '100%',
+                  padding: '8px 12px',
+                  border: '1px solid #e2e8f0',
+                  borderRadius: '6px',
+                  fontSize: '0.875rem'
                 }}
               />
             </div>
           </div>
 
-          {/* Emergency Contact */}
-          <div style={{ marginBottom: '24px' }}>
-            <h3 style={{ marginBottom: '16px', color: '#2d3748' }}>Emergency Contact</h3>
+          {/* Student ID and Grade */}
+          <div style={{ 
+            display: 'grid', 
+            gridTemplateColumns: '1fr 1fr', 
+            gap: '16px',
+            marginBottom: '16px'
+          }}>
+            <div>
+              <label style={{ display: 'block', marginBottom: '4px', fontWeight: '500' }}>
+                Student ID
+              </label>
+              <input
+                type="text"
+                value={formData.student_id}
+                onChange={(e) => handleInputChange('student_id', e.target.value)}
+                placeholder="Auto-generated"
+                style={{
+                  width: '100%',
+                  padding: '8px 12px',
+                  border: '1px solid #e2e8f0',
+                  borderRadius: '6px',
+                  fontSize: '0.875rem',
+                  background: formData.student_id && !isEditing ? '#f7fafc' : 'white'
+                }}
+              />
+              <div style={{ fontSize: '0.75rem', color: '#718096', marginTop: '2px' }}>
+                {!isEditing && 'Auto-generated based on sequence'}
+              </div>
+            </div>
             
-            <div style={{ 
-              display: 'grid', 
-              gridTemplateColumns: '1fr 1fr', 
-              gap: '16px'
-            }}>
-              <div>
-                <label style={{ display: 'block', marginBottom: '4px', fontWeight: '500' }}>
-                  Contact Name
-                </label>
-                <input
-                  type="text"
-                  value={formData.emergency_contact_name}
-                  onChange={(e) => handleInputChange('emergency_contact_name', e.target.value)}
-                  style={{
-                    width: '100%',
-                    padding: '8px 12px',
-                    border: '1px solid #e2e8f0',
-                    borderRadius: '6px'
-                  }}
-                />
-              </div>
-              
-              <div>
-                <label style={{ display: 'block', marginBottom: '4px', fontWeight: '500' }}>
-                  Contact Phone
-                </label>
-                <input
-                  type="tel"
-                  value={formData.emergency_contact_phone}
-                  onChange={(e) => handleInputChange('emergency_contact_phone', e.target.value)}
-                  style={{
-                    width: '100%',
-                    padding: '8px 12px',
-                    border: '1px solid #e2e8f0',
-                    borderRadius: '6px'
-                  }}
-                />
-              </div>
+            <div>
+              <label style={{ display: 'block', marginBottom: '4px', fontWeight: '500' }}>
+                Entry Grade *
+              </label>
+              <select
+                required
+                value={formData.entry_grade_level}
+                onChange={(e) => handleInputChange('entry_grade_level', e.target.value)}
+                style={{
+                  width: '100%',
+                  padding: '8px 12px',
+                  border: '1px solid #e2e8f0',
+                  borderRadius: '6px',
+                  fontSize: '0.875rem'
+                }}
+              >
+                <option value="">Select Grade</option>
+                {grades.map(grade => (
+                  <option key={grade.value} value={grade.value}>
+                    {grade.label}
+                  </option>
+                ))}
+              </select>
             </div>
           </div>
 
-          {/* Special Needs */}
-          {specialNeedsTags.length > 0 && (
-            <div style={{ marginBottom: '24px' }}>
-              <h3 style={{ marginBottom: '16px', color: '#2d3748' }}>Special Needs</h3>
-              
-              <div style={{ 
-                display: 'grid', 
-                gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', 
-                gap: '8px'
-              }}>
-                {specialNeedsTags.map(tag => (
-                  <label 
-                    key={tag.id} 
-                    style={{ 
-                      display: 'flex', 
-                      alignItems: 'center', 
-                      gap: '8px',
-                      padding: '8px',
-                      border: '1px solid #e2e8f0',
-                      borderRadius: '6px',
-                      cursor: 'pointer'
-                    }}
-                  >
-                    <input
-                      type="checkbox"
-                      checked={formData.special_needs_tags.includes(tag.id)}
-                      onChange={(e) => handleSpecialNeedsChange(tag.id, e.target.checked)}
-                    />
-                    <span style={{ fontSize: '0.875rem' }}>{tag.name}</span>
-                  </label>
-                ))}
-              </div>
+          {/* Date of Birth and Entry Date */}
+          <div style={{ 
+            display: 'grid', 
+            gridTemplateColumns: '1fr 1fr', 
+            gap: '16px',
+            marginBottom: '16px'
+          }}>
+            <div>
+              <label style={{ display: 'block', marginBottom: '4px', fontWeight: '500' }}>
+                Date of Birth
+              </label>
+              <input
+                type="date"
+                value={formData.date_of_birth}
+                onChange={(e) => handleInputChange('date_of_birth', e.target.value)}
+                style={{
+                  width: '100%',
+                  padding: '8px 12px',
+                  border: '1px solid #e2e8f0',
+                  borderRadius: '6px',
+                  fontSize: '0.875rem'
+                }}
+              />
             </div>
-          )}
+            
+            <div>
+              <label style={{ display: 'block', marginBottom: '4px', fontWeight: '500' }}>
+                Entry Date
+              </label>
+              <input
+                type="date"
+                value={formData.entry_date}
+                onChange={(e) => handleInputChange('entry_date', e.target.value)}
+                style={{
+                  width: '100%',
+                  padding: '8px 12px',
+                  border: '1px solid #e2e8f0',
+                  borderRadius: '6px',
+                  fontSize: '0.875rem'
+                }}
+              />
+            </div>
+          </div>
 
-          {/* Medical Notes */}
+          {/* Email */}
           <div style={{ marginBottom: '24px' }}>
             <label style={{ display: 'block', marginBottom: '4px', fontWeight: '500' }}>
-              Medical Notes
+              Email (Optional)
             </label>
-            <textarea
-              value={formData.medical_notes}
-              onChange={(e) => handleInputChange('medical_notes', e.target.value)}
-              rows={3}
+            <input
+              type="email"
+              value={formData.email}
+              onChange={(e) => handleInputChange('email', e.target.value)}
+              placeholder="student@school.edu"
               style={{
                 width: '100%',
                 padding: '8px 12px',
                 border: '1px solid #e2e8f0',
                 borderRadius: '6px',
-                resize: 'vertical'
+                fontSize: '0.875rem'
               }}
-              placeholder="Any important medical information, allergies, or special considerations..."
             />
           </div>
 
@@ -459,7 +357,8 @@ export default function StudentFormModal({ student, onSave, onCancel }) {
                 borderRadius: '6px',
                 background: 'white',
                 color: '#4a5568',
-                cursor: 'pointer'
+                cursor: 'pointer',
+                fontSize: '0.875rem'
               }}
             >
               Cancel
@@ -475,6 +374,7 @@ export default function StudentFormModal({ student, onSave, onCancel }) {
                 background: loading ? '#a0aec0' : '#3182ce',
                 color: 'white',
                 cursor: loading ? 'not-allowed' : 'pointer',
+                fontSize: '0.875rem',
                 minWidth: '100px'
               }}
             >

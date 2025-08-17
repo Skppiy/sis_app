@@ -1,5 +1,5 @@
 // frontend/src/components/admin/AdminLayout.jsx
-// Updated admin orchestrator with proper student tab integration
+// Updated to include Special Needs tab
 
 import { useState, useEffect } from "react";
 import { apiGet } from "../../requestHelper";
@@ -9,6 +9,7 @@ import AcademicsTab from "./tabs/AcademicsTab";
 import FacilitiesTab from "./tabs/FacilitiesTab";
 import UsersTab from "./tabs/UsersTab";
 import StudentsTab from "./tabs/StudentsTab";
+import StudentServicesTab from "./tabs/StudentServicesTab";
 
 export default function AdminLayout() {
   const { active_school } = useAuth();
@@ -136,7 +137,7 @@ export default function AdminLayout() {
         
         {/* Simple Tab Navigation */}
         <div style={{ display: 'flex', gap: 12, marginBottom: 20, flexWrap: 'wrap' }}>
-          {['overview', 'academics', 'facilities', 'users', 'students'].map(tabName => (
+          {['overview', 'academics', 'facilities', 'users', 'students', 'student-services'].map(tabName => (
             <button
               key={tabName}
               onClick={() => setTab(tabName)}
@@ -147,10 +148,11 @@ export default function AdminLayout() {
                 border: 'none',
                 borderRadius: 4,
                 cursor: 'pointer',
-                textTransform: 'capitalize'
+                textTransform: 'capitalize',
+                fontSize: '0.875rem'
               }}
             >
-              {tabName}
+              {tabName === 'student-services' ? '🎓 Student Services' : tabName.replace('-', ' ')}
             </button>
           ))}
         </div>
@@ -183,6 +185,12 @@ export default function AdminLayout() {
 
       {tab === 'students' && (
         <StudentsTab 
+          data={data}
+        />
+      )}
+
+      {tab === 'student-services' && (
+        <StudentServicesTab 
           data={data}
         />
       )}

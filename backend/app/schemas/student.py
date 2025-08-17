@@ -1,10 +1,10 @@
-# backend/app/schemas/student.py - Updated
+# backend/app/schemas/student.py
+# Fixed to work with your model structure
 
 from pydantic import BaseModel, EmailStr
 from datetime import date
-from typing import Optional, List
+from typing import Optional
 from uuid import UUID
-from .special_needs import StudentSpecialNeedOut
 
 class StudentBase(BaseModel):
     first_name: str
@@ -23,6 +23,8 @@ class StudentUpdate(BaseModel):
     email: Optional[EmailStr] = None
     date_of_birth: Optional[date] = None
     student_id: Optional[str] = None
+    entry_date: Optional[date] = None
+    entry_grade_level: Optional[str] = None
     is_active: Optional[bool] = None
 
 class StudentOut(StudentBase):
@@ -36,12 +38,10 @@ class StudentOut(StudentBase):
         orm_mode = True
         from_attributes = True
 
+# Simplified version without complex relationships for now
 class StudentWithDetails(StudentOut):
-    special_needs: List[StudentSpecialNeedOut] = []
-    # academic_records: List[StudentAcademicRecordOut] = []  # Will add later
-    # parent_relationships: List[ParentStudentRelationshipOut] = []  # Will add later
+    pass  # Will add relationships later when they're properly set up
 
     class Config:
         orm_mode = True
         from_attributes = True
-

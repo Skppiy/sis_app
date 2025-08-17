@@ -1,4 +1,4 @@
-# backend/app/main.py - Original working version
+# backend/app/main.py - Updated with student services router
 
 from fastapi import FastAPI, Depends
 from fastapi.middleware.cors import CORSMiddleware
@@ -16,10 +16,11 @@ from .routers import subjects as subjects_router
 from .routers import rooms as rooms_router
 from .routers import special_needs as special_needs_router
 from .routers import parents as parents_router
+from .routers import student_services as student_services_router
 
 app = FastAPI(title="SIS API - Phase A")
 
-# Original CORS middleware
+# CORS middleware
 app.add_middleware(
     CORSMiddleware,
     allow_origins=[
@@ -50,3 +51,4 @@ app.include_router(subjects_router.router, prefix="/subjects")
 app.include_router(rooms_router.router, prefix="/rooms")
 app.include_router(special_needs_router.router, prefix="/special-needs")
 app.include_router(parents_router.router, prefix="/parents")
+app.include_router(student_services_router.router, prefix="/student-services")
