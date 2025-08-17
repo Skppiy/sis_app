@@ -1,5 +1,5 @@
 # backend/app/routers/classrooms.py
-# Fixed classroom creation with proper homeroom support
+# Fixed with proper room loading and PUT endpoint
 
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -16,7 +16,7 @@ from ..models.academic_year import AcademicYear
 from ..models.room import Room
 from ..models.user import User
 from ..models.classroom_teacher_assignment import ClassroomTeacherAssignment
-from ..schemas.classroom import ClassroomCreate, ClassroomOut, ClassroomWithDetails
+from ..schemas.classroom import ClassroomCreate, ClassroomOut, ClassroomWithDetails, ClassroomUpdate
 
 router = APIRouter(tags=["classrooms"])
 
@@ -28,10 +28,12 @@ async def list_classrooms(
     session: AsyncSession = Depends(get_db),
     _: any = Depends(get_current_user),
 ):
-    """List classrooms with optional filtering"""
+    """List classrooms with optional filtering - FIXED to load all relationships"""
     query = select(Classroom).options(
         joinedload(Classroom.subject),
-        joinedload(Classroom.academic_year)
+        joinedload(Classroom.academic_year),
+        joinedload(Classroom.room),  # FIXED: Load room relationship
+        selectinload(Classroom.teacher_assignments).joinedload(ClassroomTeacherAssignment.teacher)  # FIXED: Load teacher assignments
     )
     
     if academic_year_id:
@@ -51,18 +53,11 @@ async def list_classrooms(
     result = await session.execute(query)
     classrooms = result.scalars().all()
     
-    # Add enrollment count and room information for each classroom
+    # Add enrollment count for each classroom
     for classroom in classrooms:
         # Get enrollment count (when enrollment model exists)
         # For now, set to 0 as placeholder
         classroom.enrollment_count = 0
-        
-        # Get room information if room_id exists
-        if hasattr(classroom, 'room_id') and classroom.room_id:
-            room_result = await session.execute(
-                select(Room).where(Room.id == classroom.room_id)
-            )
-            classroom.room = room_result.scalar_one_or_none()
     
     return classrooms
 
@@ -78,6 +73,7 @@ async def get_classroom(
         .options(
             joinedload(Classroom.subject),
             joinedload(Classroom.academic_year),
+            joinedload(Classroom.room),  # FIXED: Load room relationship
             selectinload(Classroom.teacher_assignments).joinedload(ClassroomTeacherAssignment.teacher)
         )
         .where(Classroom.id == UUID(classroom_id))
@@ -109,23 +105,10 @@ async def create_classroom(
     
     # Validate room exists if provided
     room = None
-    if hasattr(payload, 'room_id') and payload.room_id:
+    if payload.room_id:
         room = await session.get(Room, UUID(payload.room_id))
         if not room:
             raise HTTPException(status_code=400, detail="Room not found")
-        
-        # Check if room is already assigned for this time slot (future enhancement)
-        # For now, we'll allow multiple assignments to same room
-    
-    # Validate teacher exists if provided  
-    teacher = None
-    if hasattr(payload, 'teacher_id') and payload.teacher_id:
-        teacher = await session.get(User, UUID(payload.teacher_id))
-        if not teacher:
-            raise HTTPException(status_code=400, detail="Teacher not found")
-        
-        # Verify teacher has appropriate role (future enhancement)
-        # For now, assume any user can be assigned as teacher
     
     # Create classroom with room assignment
     classroom_data = {
@@ -144,30 +127,11 @@ async def create_classroom(
     
     classroom = Classroom(**classroom_data)
     session.add(classroom)
-    await session.flush()  # Get the classroom ID
-    
-    # Create teacher assignment if teacher provided
-    if teacher:
-        teacher_assignment = ClassroomTeacherAssignment(
-            id=uuid.uuid4(),
-            classroom_id=classroom.id,
-            teacher_user_id=teacher.id,
-            role_name="Primary Teacher",
-            can_view_grades=True,
-            can_modify_grades=True,
-            can_take_attendance=True,
-            can_view_parent_contact=True,
-            can_create_assignments=True,
-            start_date=academic_year.start_date,
-            is_active=True
-        )
-        session.add(teacher_assignment)
-    
     await session.commit()
     await session.refresh(classroom)
     
     # Load related data for response
-    await session.refresh(classroom, ["subject", "academic_year"])
+    await session.refresh(classroom, ["subject", "academic_year", "room"])
     
     return classroom
 
@@ -215,16 +179,13 @@ async def create_homeroom_classroom(
             if not room:
                 raise HTTPException(status_code=400, detail="Room not found")
         
-        # Get a core subject for the homeroom (we'll use the first one available)
-        # In a homeroom setup, we typically assign one "homeroom" subject that represents
-        # the teacher's primary classroom, then auto-assign core subjects separately
+        # Get a core subject for the homeroom
         core_subjects_result = await session.execute(
             select(Subject).where(Subject.is_homeroom_default == True).limit(1)
         )
         homeroom_subject = core_subjects_result.scalar_one_or_none()
         
         if not homeroom_subject:
-            # If no homeroom subjects exist, create a default one or use any core subject
             general_subjects_result = await session.execute(
                 select(Subject).where(Subject.subject_type == 'CORE').limit(1)
             )
@@ -279,7 +240,7 @@ async def create_homeroom_classroom(
         await session.refresh(classroom)
         
         # Load related data for response
-        await session.refresh(classroom, ["subject", "academic_year"])
+        await session.refresh(classroom, ["subject", "academic_year", "room"])
         
         return classroom
         
@@ -297,30 +258,38 @@ async def create_homeroom_classroom(
 @router.put("/{classroom_id}", response_model=ClassroomOut)
 async def update_classroom(
     classroom_id: str,
-    payload: ClassroomCreate,
+    payload: ClassroomUpdate,
     session: AsyncSession = Depends(get_db),
     _: any = Depends(require_admin),
 ):
-    """Update a classroom"""
+    """Update a classroom - FIXED to handle room_id"""
     classroom = await session.get(Classroom, UUID(classroom_id))
     if not classroom:
         raise HTTPException(status_code=404, detail="Classroom not found")
     
-    # Update classroom fields
-    classroom.name = payload.name
-    classroom.grade_level = payload.grade_level
-    classroom.classroom_type = payload.classroom_type
-    classroom.max_students = payload.max_students
+    # Validate room if being updated
+    if payload.room_id is not None:
+        if payload.room_id == "":
+            # Empty string means remove room assignment
+            classroom.room_id = None
+        else:
+            room = await session.get(Room, UUID(payload.room_id))
+            if not room:
+                raise HTTPException(status_code=400, detail="Room not found")
+            classroom.room_id = room.id
     
-    # Update subject if provided
-    if payload.subject_id:
-        subject = await session.get(Subject, UUID(payload.subject_id))
-        if not subject:
-            raise HTTPException(status_code=400, detail="Subject not found")
-        classroom.subject_id = UUID(payload.subject_id)
+    # Update other fields
+    if payload.name is not None:
+        classroom.name = payload.name
+    if payload.grade_level is not None:
+        classroom.grade_level = payload.grade_level
+    if payload.classroom_type is not None:
+        classroom.classroom_type = payload.classroom_type
+    if payload.max_students is not None:
+        classroom.max_students = payload.max_students
     
     await session.commit()
-    await session.refresh(classroom)
+    await session.refresh(classroom, ["subject", "academic_year", "room"])
     return classroom
 
 @router.delete("/{classroom_id}", status_code=status.HTTP_204_NO_CONTENT)

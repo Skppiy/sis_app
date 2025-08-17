@@ -1,5 +1,5 @@
 // frontend/src/components/admin/forms/SmartClassroomForm.jsx
-// Fixed API endpoints and teacher loading
+// Fixed to properly handle editing and teacher assignment extraction
 
 import { useState, useEffect } from "react";
 import { apiGet } from "../../../requestHelper";
@@ -14,13 +14,23 @@ export default function SmartClassroomForm({ classroom = null, data, onSubmit, o
   const [loading, setLoading] = useState(false);
   const [dataLoading, setDataLoading] = useState(true);
   
+  // FIXED: Extract teacher_id from teacher_assignments for editing
+  const getTeacherIdFromClassroom = (classroom) => {
+    if (!classroom?.teacher_assignments) return '';
+    const primaryTeacher = classroom.teacher_assignments.find(ta => 
+      ta.is_active && (ta.role_name === 'Homeroom Teacher' || ta.role_name === 'Primary Teacher')
+    );
+    return primaryTeacher?.teacher_user_id || '';
+  };
+  
   const [formData, setFormData] = useState({
-    teacher_id: classroom?.teacher_id || '',
+    name: classroom?.name || '',
+    teacher_id: getTeacherIdFromClassroom(classroom),
     grade_level: classroom?.grade_level || '',
     room_id: classroom?.room_id || '',
-    subject_id: classroom?.subject_id || '', // For middle school only
+    subject_id: classroom?.subject_id || '',
     max_students: classroom?.max_students || 25,
-    academic_year_id: activeYear?.id || ''
+    academic_year_id: classroom?.academic_year_id || activeYear?.id || ''
   });
 
   const [error, setError] = useState("");
@@ -30,11 +40,26 @@ export default function SmartClassroomForm({ classroom = null, data, onSubmit, o
     loadTeachersAndRooms();
   }, []);
 
+  // Update form data when classroom prop changes (for editing)
+  useEffect(() => {
+    if (classroom) {
+      setFormData({
+        name: classroom.name || '',
+        teacher_id: getTeacherIdFromClassroom(classroom),
+        grade_level: classroom.grade_level || '',
+        room_id: classroom.room_id || '',
+        subject_id: classroom.subject_id || '',
+        max_students: classroom.max_students || 25,
+        academic_year_id: classroom.academic_year_id || activeYear?.id || ''
+      });
+    }
+  }, [classroom, activeYear]);
+
   const loadTeachersAndRooms = async () => {
     try {
       setDataLoading(true);
       const [usersRes, roomsRes] = await Promise.all([
-        apiGet("/admin/users"), // Fixed: Remove the ?role=teacher parameter
+        apiGet("/admin/users"),
         apiGet("/rooms")
       ]);
       
@@ -80,28 +105,33 @@ export default function SmartClassroomForm({ classroom = null, data, onSubmit, o
         throw new Error("Subject is required for middle school classrooms");
       }
 
-      // Auto-generate classroom name if not provided
-      const selectedTeacher = teachers.find(t => t.id === formData.teacher_id);
+      // For editing, preserve existing name unless it's being changed
       let classroomName = formData.name;
       
-      if (!classroomName && selectedTeacher) {
-        if (isElementary) {
-          classroomName = `${selectedTeacher.first_name} ${selectedTeacher.last_name}'s Grade ${formData.grade_level} Homeroom`;
-        } else {
-          const selectedSubject = subjects.find(s => s.id === formData.subject_id);
-          classroomName = `Grade ${formData.grade_level} ${selectedSubject?.name || 'Subject'} - ${selectedTeacher.first_name} ${selectedTeacher.last_name}`;
+      // Auto-generate classroom name if not provided or if creating new
+      if (!classroomName || !isEditing) {
+        const selectedTeacher = teachers.find(t => t.id === formData.teacher_id);
+        if (selectedTeacher) {
+          if (isElementary) {
+            classroomName = `${selectedTeacher.first_name} ${selectedTeacher.last_name}'s Grade ${formData.grade_level} Homeroom`;
+          } else {
+            const selectedSubject = subjects.find(s => s.id === formData.subject_id);
+            classroomName = `Grade ${formData.grade_level} ${selectedSubject?.name || 'Subject'} - ${selectedTeacher.first_name} ${selectedTeacher.last_name}`;
+          }
         }
       }
 
       const submitData = {
         ...formData,
-        name: classroomName
+        name: classroomName,
+        // Convert empty room_id to null for API
+        room_id: formData.room_id || null
       };
 
       console.log("Submitting classroom data:", submitData);
       await onSubmit(submitData);
     } catch (err) {
-      setError(err.message || "Failed to create classroom");
+      setError(err.message || "Failed to save classroom");
     } finally {
       setLoading(false);
     }
@@ -127,6 +157,11 @@ export default function SmartClassroomForm({ classroom = null, data, onSubmit, o
     { value: '7', label: '7th Grade', division: 'Middle School' },
     { value: '8', label: '8th Grade', division: 'Middle School' }
   ];
+
+  // Filter rooms to show availability status
+  const availableRooms = rooms.filter(room => 
+    room.is_active && (room.id === formData.room_id || room.is_available !== false)
+  );
 
   if (dataLoading) {
     return (
@@ -177,44 +212,40 @@ export default function SmartClassroomForm({ classroom = null, data, onSubmit, o
         overflow: 'auto'
       }}>
         <h3 style={{ marginTop: 0 }}>
-          {isEditing ? 'Edit' : 'Create'} Smart Classroom
+          {isEditing ? 'Edit Smart Classroom' : 'Create Smart Classroom'}
         </h3>
-
-        {/* Smart Classroom Intelligence Info */}
-        <div style={{ 
-          background: '#f0f9ff', 
-          padding: 16, 
-          borderRadius: 6, 
-          marginBottom: 20,
-          fontSize: '0.875rem',
-          color: '#0c4a6e'
-        }}>
-          <strong>🧠 Smart Classroom Intelligence:</strong>
-          <ul style={{ margin: '8px 0', paddingLeft: 20 }}>
-            <li><strong>Elementary (K-5):</strong> Creates homeroom + auto-assigns {coreSubjects.length} core subjects</li>
-            <li><strong>Middle School (6-8):</strong> Creates subject-specific classroom</li>
-          </ul>
-          {coreSubjects.length > 0 && (
-            <div style={{ fontSize: '0.8rem', marginTop: 8, color: '#1e40af' }}>
-              <strong>Core Subjects Available:</strong> {coreSubjects.map(s => s.name).join(', ')}
-            </div>
-          )}
-        </div>
-
+        
         {error && (
           <div style={{ 
             background: '#fed7d7', 
             color: '#c53030', 
             padding: 12, 
             borderRadius: 4, 
-            marginBottom: 16
+            marginBottom: 16 
           }}>
-            ⚠️ {error}
+            {error}
           </div>
         )}
 
         <form onSubmit={handleSubmit}>
-          {/* Grade Level Selection - First to drive intelligence */}
+          {/* Smart Classroom Intelligence Info */}
+          <div style={{ 
+            background: '#e6fffa', 
+            border: '1px solid #81e6d9', 
+            padding: 12, 
+            borderRadius: 4, 
+            marginBottom: 16 
+          }}>
+            <div style={{ fontWeight: 'bold', marginBottom: 4 }}>
+              🧠 Smart Classroom Intelligence:
+            </div>
+            <ul style={{ margin: 0, paddingLeft: 16, fontSize: '0.875rem' }}>
+              <li><strong>Elementary (K-5):</strong> Creates homeroom + auto-assigns {coreSubjects.length} core subjects</li>
+              <li><strong>Middle School (6-8):</strong> Creates subject-specific classroom</li>
+            </ul>
+          </div>
+
+          {/* Grade Level Selection */}
           <FormField label="Grade Level" required>
             <select
               value={formData.grade_level}
@@ -231,7 +262,7 @@ export default function SmartClassroomForm({ classroom = null, data, onSubmit, o
             </select>
           </FormField>
 
-          {/* Intelligence Display */}
+          {/* Classroom Type Display */}
           {formData.grade_level && (
             <div style={{ 
               background: isElementary ? '#f0fff4' : '#fffbeb', 
@@ -245,8 +276,8 @@ export default function SmartClassroomForm({ classroom = null, data, onSubmit, o
               </div>
               <div style={{ fontSize: '0.875rem' }}>
                 {isElementary 
-                  ? `Will create homeroom and auto-assign ${coreSubjects.length} core subjects to this teacher`
-                  : 'Will create subject-specific classroom for departmentalized teaching'
+                  ? `Will ${isEditing ? 'update' : 'create'} homeroom and auto-assign ${coreSubjects.length} core subjects to this teacher`
+                  : `Will ${isEditing ? 'update' : 'create'} subject-specific classroom for departmentalized teaching`
                 }
               </div>
             </div>
@@ -301,9 +332,10 @@ export default function SmartClassroomForm({ classroom = null, data, onSubmit, o
               style={{ width: '100%', padding: 8, border: '1px solid #ccc', borderRadius: 4 }}
             >
               <option value="">No Room Assigned</option>
-              {rooms.map(room => (
+              {availableRooms.map(room => (
                 <option key={room.id} value={room.id}>
                   {room.name} ({room.room_code}) - {room.room_type} - Capacity: {room.capacity}
+                  {room.id === formData.room_id ? ' (Currently Assigned)' : ''}
                 </option>
               ))}
             </select>
@@ -327,7 +359,7 @@ export default function SmartClassroomForm({ classroom = null, data, onSubmit, o
           {/* Academic Year (Hidden, auto-filled) */}
           <input type="hidden" value={formData.academic_year_id} />
 
-          {/* Preview of what will be created */}
+          {/* Preview of what will be created/updated */}
           {formData.grade_level && formData.teacher_id && (
             <div style={{ 
               background: '#f7fafc', 
@@ -391,7 +423,7 @@ export default function SmartClassroomForm({ classroom = null, data, onSubmit, o
                 cursor: loading ? 'not-allowed' : 'pointer' 
               }}
             >
-              {loading ? 'Creating...' : (isEditing ? 'Update' : 'Create')} Smart Classroom
+              {loading ? (isEditing ? 'Updating...' : 'Creating...') : (isEditing ? 'Update' : 'Create')} Smart Classroom
             </button>
           </div>
         </form>
