@@ -1,8 +1,9 @@
 # backend/app/routers/subjects.py
+# Fixed with missing func import
 
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select, and_
+from sqlalchemy import select, and_, func  # Added missing func import
 from typing import List, Optional
 from ..deps import get_db, require_admin, get_current_user
 from ..models.subject import Subject
@@ -37,8 +38,10 @@ async def get_core_subjects(
     _: any = Depends(get_current_user),
 ):
     """Get system core subjects that cannot be deleted"""
-    core_subjects = Subject.get_core_subjects(session)
-    return core_subjects
+    result = await session.execute(
+        select(Subject).where(Subject.is_homeroom_default == True)
+    )
+    return result.scalars().all()
 
 @router.post("", response_model=SubjectOut, status_code=status.HTTP_201_CREATED)
 async def create_subject(

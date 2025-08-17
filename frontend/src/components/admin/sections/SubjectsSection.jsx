@@ -1,5 +1,5 @@
 // frontend/src/components/admin/sections/SubjectsSection.jsx
-// Focused subjects management - 90 lines
+// Fixed prop name mismatch for SubjectForm
 
 import { useState } from "react";
 import { apiPost, apiPut, apiDelete } from "../../../requestHelper";
@@ -76,14 +76,11 @@ export default function SubjectsSection({ subjects, onDataChange }) {
       ) : (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 8, maxHeight: 300, overflowY: 'auto' }}>
           {subjects.map(subject => (
-            <div key={subject.id} style={{ padding: '8px', background: subject.is_homeroom_default ? '#e6fffa' : '#f7fafc', borderRadius: 4, border: '1px solid #e2e8f0', position: 'relative' }}>
-              <div style={{ paddingRight: 80 }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4 }}>
-                  <strong style={{ fontSize: '0.9rem' }}>{subject.name}</strong>
-                  <span style={{ background: '#718096', color: 'white', padding: '1px 4px', borderRadius: 2, fontSize: '0.7rem' }}>{subject.code}</span>
-                </div>
-                <div style={{ fontSize: '0.75rem', color: '#718096' }}>
-                  {subject.subject_type} • {subject.applies_to_elementary && subject.applies_to_middle ? 'K-8' : subject.applies_to_elementary ? 'K-5' : subject.applies_to_middle ? '6-8' : 'None'}
+            <div key={subject.id} style={{ padding: '8px', background: subject.is_homeroom_default ? '#edf7ed' : '#fafafa', border: '1px solid #e2e8f0', borderRadius: 4, position: 'relative' }}>
+              <div style={{ fontWeight: 'bold', fontSize: '0.9rem' }}>{subject.name}</div>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                <div style={{ fontSize: '0.8rem', color: '#4a5568' }}>
+                  {subject.code} • {subject.subject_type} • {subject.applies_to_elementary && subject.applies_to_middle ? 'K-8' : subject.applies_to_elementary ? 'K-5' : subject.applies_to_middle ? '6-8' : 'None'}
                   {subject.is_homeroom_default && (
                     <span style={{ background: '#38b2ac', color: 'white', padding: '1px 4px', borderRadius: 2, fontSize: '0.65rem', marginLeft: 8 }}>AUTO</span>
                   )}
@@ -113,7 +110,7 @@ export default function SubjectsSection({ subjects, onDataChange }) {
         <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000 }}>
           <div style={{ background: 'white', padding: '24px', borderRadius: '8px', width: '90%', maxWidth: '600px', maxHeight: '90%', overflow: 'auto' }}>
             <h3 style={{ marginTop: 0 }}>Edit Subject</h3>
-            <SubjectForm initialData={editingSubject} onSubmit={handleEdit} onCancel={() => setEditingSubject(null)} />
+            <SubjectForm subject={editingSubject} onSubmit={handleEdit} onCancel={() => setEditingSubject(null)} />
           </div>
         </div>
       )}

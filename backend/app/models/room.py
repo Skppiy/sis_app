@@ -1,4 +1,5 @@
 # backend/app/models/room.py
+# Fixed to include classrooms relationship
 
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from sqlalchemy import String, Integer, Boolean, ForeignKey
@@ -32,7 +33,7 @@ class Room(Base):
     
     # Relationships
     school = relationship("School", back_populates="rooms")
-    # classrooms will reference this for room assignments (in scheduling phase)
+    classrooms = relationship("Classroom", back_populates="room")  # ADDED: Missing relationship
     
     def __repr__(self):
         return f"<Room {self.name} ({self.room_type}) - Capacity: {self.capacity}>"
@@ -54,3 +55,15 @@ class Room(Base):
             cls.room_type == room_type,
             cls.is_active == True
         ).all()
+    
+    @property
+    def is_available(self):
+        """Check if room is currently available for assignment"""
+        # For now, just check if it's active
+        # In the future, this could check scheduling conflicts
+        return self.is_active
+    
+    @property
+    def assigned_classrooms_count(self):
+        """Get count of classrooms currently assigned to this room"""
+        return len([c for c in self.classrooms if c.room_id == self.id])
