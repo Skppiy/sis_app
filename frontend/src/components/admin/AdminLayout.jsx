@@ -1,11 +1,12 @@
 // frontend/src/components/admin/AdminLayout.jsx
-// Clean admin orchestrator - just handles data and routing
+// Fixed admin orchestrator with proper prop passing
 
 import { useState, useEffect } from "react";
 import { apiGet } from "../../requestHelper";
 import { useAuth } from "../../AuthContext";
 import OverviewTab from "./tabs/OverviewTab";
 import AcademicsTab from "./tabs/AcademicsTab";
+import FacilitiesTab from "./tabs/FacilitiesTab";
 
 export default function AdminLayout() {
   const { active_school } = useAuth();
@@ -153,18 +154,26 @@ export default function AdminLayout() {
         </div>
       </div>
 
-      {/* Simple Tab Routing */}
+      {/* Tab Routing with proper data flow */}
       {tab === 'overview' && <OverviewTab data={data} />}
-      {tab === 'academics' && <AcademicsTab data={data} />}
       
-      {/* Simple Placeholders */}
+      {tab === 'academics' && (
+        <AcademicsTab 
+          data={data} 
+          onDataChange={loadData} 
+          onError={setError} 
+        />
+      )}
+      
       {tab === 'facilities' && (
-        <div className="card">
-          <h2 className="section-title">Facilities Management</h2>
-          <p>Facilities management tab coming next...</p>
-        </div>
+        <FacilitiesTab 
+          data={data} 
+          onDataChange={loadData} 
+          onError={setError} 
+        />
       )}
 
+      {/* Simple Placeholders for future tabs */}
       {tab === 'users' && (
         <div className="card">
           <h2 className="section-title">User Management</h2>

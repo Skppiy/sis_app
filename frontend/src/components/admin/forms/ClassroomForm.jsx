@@ -1,6 +1,9 @@
 // frontend/src/components/admin/forms/ClassroomForm.jsx
 // Classroom creation form
 
+import { useState } from "react";
+import FormField from "../shared/FormField";
+
 export function ClassroomForm({ subjects = [], initialData = {}, onSubmit, onCancel }) {
   const [formData, setFormData] = useState({
     name: initialData.name || '',
