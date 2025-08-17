@@ -1,5 +1,5 @@
 // frontend/src/components/admin/forms/SmartClassroomForm.jsx
-// Complete smart classroom form with room assignment and homeroom intelligence
+// Fixed API endpoints and teacher loading
 
 import { useState, useEffect } from "react";
 import { apiGet } from "../../../requestHelper";
@@ -33,15 +33,26 @@ export default function SmartClassroomForm({ classroom = null, data, onSubmit, o
   const loadTeachersAndRooms = async () => {
     try {
       setDataLoading(true);
-      const [teachersRes, roomsRes] = await Promise.all([
-        apiGet("/admin/users?role=teacher"),
+      const [usersRes, roomsRes] = await Promise.all([
+        apiGet("/admin/users"), // Fixed: Remove the ?role=teacher parameter
         apiGet("/rooms")
       ]);
-      setTeachers(teachersRes.filter(u => u.roles?.some(r => r.role === 'teacher')) || []);
+      
+      // Filter users to get only teachers
+      const teacherUsers = usersRes.filter(u => 
+        u.roles?.some(r => r.role === 'teacher' || r.role === 'admin') || 
+        u.role === 'teacher' || 
+        u.user_type === 'teacher'
+      ) || [];
+      
+      console.log("Available teachers:", teacherUsers);
+      console.log("Available rooms:", roomsRes);
+      
+      setTeachers(teacherUsers);
       setRooms(roomsRes || []);
     } catch (err) {
       console.error("Failed to load teachers/rooms:", err);
-      setError("Failed to load teachers and rooms");
+      setError(`Failed to load teachers and rooms: ${err.message}`);
     } finally {
       setDataLoading(false);
     }
@@ -87,6 +98,7 @@ export default function SmartClassroomForm({ classroom = null, data, onSubmit, o
         name: classroomName
       };
 
+      console.log("Submitting classroom data:", submitData);
       await onSubmit(submitData);
     } catch (err) {
       setError(err.message || "Failed to create classroom");

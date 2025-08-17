@@ -1,5 +1,5 @@
 // frontend/src/components/admin/tabs/AcademicsTab.jsx
-// Clean modular orchestrator - only 30 lines!
+// Updated to pass all data to ClassroomsSection
 
 import AcademicYearsSection from "../sections/AcademicYearsSection";
 import SubjectsSection from "../sections/SubjectsSection";  
@@ -33,6 +33,7 @@ export default function AcademicsTab({ data, onDataChange }) {
             classrooms={classrooms}
             subjects={subjects}
             onDataChange={onDataChange}
+            allData={data}
           />
         </div>
       </div>
