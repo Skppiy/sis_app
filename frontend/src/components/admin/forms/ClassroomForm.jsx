@@ -1,10 +1,10 @@
 // frontend/src/components/admin/forms/ClassroomForm.jsx
-// Classroom creation form
+// Fixed classroom creation form
 
 import { useState } from "react";
 import FormField from "../shared/FormField";
 
-export function ClassroomForm({ subjects = [], initialData = {}, onSubmit, onCancel }) {
+export default function ClassroomForm({ subjects = [], initialData = {}, onSubmit, onCancel }) {
   const [formData, setFormData] = useState({
     name: initialData.name || '',
     grade_level: initialData.grade_level || '',
@@ -103,6 +103,33 @@ export function ClassroomForm({ subjects = [], initialData = {}, onSubmit, onCan
       </FormField>
 
       <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end', marginTop: 24 }}>
-        <button type="button" onClick={onCancel} style={{ padding: '8px 16px', border: '1px solid #ccc', borderRadius: 4, background: 'white', cursor: 'pointer' }}>
+        <button 
+          type="button" 
+          onClick={onCancel} 
+          style={{ 
+            padding: '8px 16px', 
+            border: '1px solid #ccc', 
+            borderRadius: 4, 
+            background: 'white', 
+            cursor: 'pointer' 
+          }}
+        >
           Cancel
-        </button
+        </button>
+        <button 
+          type="submit" 
+          style={{ 
+            padding: '8px 16px', 
+            border: 'none', 
+            borderRadius: 4, 
+            background: '#667eea', 
+            color: 'white', 
+            cursor: 'pointer' 
+          }}
+        >
+          Create Classroom
+        </button>
+      </div>
+    </form>
+  );
+}

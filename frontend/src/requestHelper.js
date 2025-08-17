@@ -1,3 +1,6 @@
+// frontend/src/requestHelper.js
+// Fixed with all required API methods
+
 const API_BASE = import.meta.env.VITE_API_BASE || "http://localhost:8000";
 
 export function getToken() {
@@ -29,6 +32,21 @@ export async function apiGet(path) {
 export async function apiPost(path, body) {
   const res = await fetch(`${API_BASE}${path}`, {
     method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      ...authHeaders(),
+    },
+    body: JSON.stringify(body),
+  });
+  if (res.status === 401) { logout(); throw new Error('Unauthorized'); }
+  if (!res.ok) throw await res.json().catch(() => ({ detail: res.statusText }));
+  return res.json();
+}
+
+// Added missing apiPut function
+export async function apiPut(path, body) {
+  const res = await fetch(`${API_BASE}${path}`, {
+    method: "PUT",
     headers: {
       "Content-Type": "application/json",
       ...authHeaders(),
