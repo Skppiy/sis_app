@@ -32,13 +32,14 @@ class StudentUpdate(BaseModel):
 class StudentOut(StudentBase):
     """Schema for student output - includes computed fields"""
     id: UUID
+    email: Optional[str] = None
     entry_date: Optional[date] = None
     entry_grade_level: Optional[str] = None
     is_active: bool
     current_grade: Optional[str] = None  # Computed from academic records
 
     class Config:
-        from_attributes = True
+        orm_mode = True
 
 class StudentWithDetails(StudentOut):
     """Extended student schema with relationships"""
@@ -46,7 +47,7 @@ class StudentWithDetails(StudentOut):
     # Keeping it simple for now to avoid circular import issues
     
     class Config:
-        from_attributes = True
+        orm_mode = True
 
 # For enrollment and classroom management
 class StudentEnrollmentInfo(BaseModel):
@@ -58,4 +59,4 @@ class StudentEnrollmentInfo(BaseModel):
     student_id: Optional[str] = None
 
     class Config:
-        from_attributes = True
+        orm_mode = True

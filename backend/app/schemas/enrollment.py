@@ -52,7 +52,7 @@ class EnrollmentOut(EnrollmentBase):
     academic_year_id: Optional[UUID] = None
 
     class Config:
-        from_attributes = True
+        orm_mode= True
 
 class EnrollmentWithDetails(EnrollmentOut):
     """Extended enrollment schema with relationship data"""
@@ -72,4 +72,4 @@ class ClassroomRosterStudent(BaseModel):
     requires_accommodation: bool = False
 
     class Config:
-        from_attributes = True
+        orm_mode = True
