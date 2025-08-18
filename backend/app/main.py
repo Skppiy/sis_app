@@ -1,4 +1,4 @@
-# backend/app/main.py - Updated with student services router
+# backend/app/main.py - Updated with enrollment router
 
 from fastapi import FastAPI, Depends
 from fastapi.middleware.cors import CORSMiddleware
@@ -17,8 +17,9 @@ from .routers import rooms as rooms_router
 from .routers import special_needs as special_needs_router
 from .routers import parents as parents_router
 from .routers import student_services as student_services_router
+from .routers import enrollments as enrollments_router  # NEW: Enrollment router
 
-app = FastAPI(title="SIS API - Phase A")
+app = FastAPI(title="SIS API - Phase A.2")
 
 # CORS middleware
 app.add_middleware(
@@ -52,3 +53,4 @@ app.include_router(rooms_router.router, prefix="/rooms")
 app.include_router(special_needs_router.router, prefix="/special-needs")
 app.include_router(parents_router.router, prefix="/parents")
 app.include_router(student_services_router.router, prefix="/student-services")
+app.include_router(enrollments_router.router, prefix="/enrollments")  # NEW: Enrollment endpoints
