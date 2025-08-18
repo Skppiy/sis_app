@@ -1,38 +1,37 @@
 # backend/app/models/student.py
-# UPDATED TO FIX RELATIONSHIP ISSUES
-
-from sqlalchemy.orm import Mapped, mapped_column, relationship
-from sqlalchemy import String, Date, Boolean, DateTime, func
+from sqlalchemy import Column, String, Date, Boolean, DateTime, ForeignKey, func
 from sqlalchemy.dialects.postgresql import UUID
-from datetime import date, datetime
-from typing import Optional, List
+from sqlalchemy.orm import relationship
+from datetime import date, datetime, timezone
 import uuid
 from .base import Base
 
 class Student(Base):
     __tablename__ = "students"
 
-    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    first_name: Mapped[str] = mapped_column(String(50), nullable=False)
-    last_name: Mapped[str] = mapped_column(String(50), nullable=False)
-    email: Mapped[Optional[str]] = mapped_column(String(100), nullable=True, unique=True)
-    date_of_birth: Mapped[Optional[date]] = mapped_column(Date, nullable=True)
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    school_id = Column(UUID(as_uuid=True), ForeignKey('schools.id', ondelete='CASCADE'), nullable=False)
+    first_name = Column(String(50), nullable=False)
+    last_name = Column(String(50), nullable=False)
+    email = Column(String(100), nullable=True, unique=True)
+    date_of_birth = Column(Date, nullable=True)
     
     # Student ID (like student number)
-    student_id: Mapped[Optional[str]] = mapped_column(String(20), nullable=True, unique=True)
+    student_id = Column(String(20), nullable=True, unique=True)
     
     # Entry information
-    entry_date: Mapped[Optional[date]] = mapped_column(Date, nullable=True)
-    entry_grade_level: Mapped[str] = mapped_column(String(10), nullable=False)  # "K", "1", "2", etc.
+    entry_date = Column(Date, nullable=True)
+    entry_grade_level = Column(String(10), nullable=False)  # "K", "1", "2", etc.
     
     # Status
-    is_active: Mapped[bool] = mapped_column(Boolean, default=True)
+    is_active = Column(Boolean, default=True, nullable=False)
     
-    # Timestamps
-    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=func.now())
-    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=func.now(), onupdate=func.now())
+    # Timestamps - IMPORTANT: These must match the database schema
+    created_at = Column(DateTime(timezone=True), nullable=False, default=lambda: datetime.now(timezone.utc))
+    updated_at = Column(DateTime(timezone=True), nullable=False, default=lambda: datetime.now(timezone.utc), onupdate=lambda: datetime.now(timezone.utc))
 
-    # FIXED RELATIONSHIPS - Using back_populates instead of backref
+    # Relationships
+    school = relationship("School", back_populates="students")
     enrollments = relationship("Enrollment", back_populates="student", cascade="all, delete-orphan")
     academic_records = relationship("StudentAcademicRecord", back_populates="student", cascade="all, delete-orphan")
     special_needs = relationship("StudentSpecialNeed", back_populates="student", cascade="all, delete-orphan")
