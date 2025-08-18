@@ -20,6 +20,8 @@ class AcademicYear(Base):
     # Relationships
     academic_records = relationship("StudentAcademicRecord", back_populates="academic_year", cascade="all, delete-orphan")
     classrooms = relationship("Classroom", back_populates="academic_year", cascade="all, delete-orphan")
+    enrollments = relationship("Enrollment", back_populates="academic_year", cascade="all, delete-orphan")
+    classrooms = relationship("Classroom", back_populates="academic_year", cascade="all, delete-orphan")
     
     def __repr__(self):
         return f"<AcademicYear {self.name} ({'Active' if self.is_active else 'Inactive'})>"

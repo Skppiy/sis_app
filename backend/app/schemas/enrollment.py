@@ -1,13 +1,13 @@
-# =============================================================================
-# 1. backend/app/schemas/enrollment.py - REPLACE ENTIRE FILE
-# =============================================================================
+# backend/app/schemas/enrollment.py
+# COMPLETE FIXED SCHEMA - No circular imports
 
-from pydantic import BaseModel
+from pydantic import BaseModel, validator
 from datetime import date, datetime
 from typing import Optional, List
 from uuid import UUID
 
 class EnrollmentBase(BaseModel):
+    """Base enrollment fields"""
     enrollment_date: Optional[date] = None
     enrollment_status: str = "ACTIVE"
     is_audit_only: bool = False
@@ -21,6 +21,15 @@ class EnrollmentCreate(BaseModel):
     enrollment_status: str = "ACTIVE"
     is_audit_only: bool = False
     requires_accommodation: bool = False
+
+    @validator('student_id', 'classroom_id')
+    def validate_uuids(cls, v):
+        """Validate UUID strings"""
+        try:
+            UUID(v)
+            return v
+        except ValueError:
+            raise ValueError('Invalid UUID format')
 
 class EnrollmentUpdate(BaseModel):
     """Schema for updating an enrollment"""
@@ -36,13 +45,11 @@ class EnrollmentOut(EnrollmentBase):
     student_id: UUID
     classroom_id: UUID
     is_active: bool
-    created_at: datetime
-    updated_at: datetime
     enrollment_date: Optional[date] = None
     withdrawal_date: Optional[date] = None
     withdrawal_reason: Optional[str] = None
     enrolled_by: Optional[UUID] = None
-    school_year_id: Optional[UUID] = None
+    academic_year_id: Optional[UUID] = None
 
     class Config:
         from_attributes = True
@@ -52,10 +59,6 @@ class EnrollmentWithDetails(EnrollmentOut):
     student_name: Optional[str] = None
     classroom_name: Optional[str] = None
 
-    class Config:
-        from_attributes = True
-
-# For classroom rosters
 class ClassroomRosterStudent(BaseModel):
     """Student info for classroom rosters"""
     id: UUID

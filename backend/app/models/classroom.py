@@ -1,5 +1,5 @@
 # backend/app/models/classroom.py
-# Fixed to include room_id field for proper room assignment
+# UPDATED TO FIX RELATIONSHIP ISSUES
 
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from sqlalchemy import String, Integer, ForeignKey
@@ -14,23 +14,23 @@ class Classroom(Base):
     id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     
     # Flexible Admin-Created Naming
-    name: Mapped[str] = mapped_column(String(100), nullable=False)  # "7th - English - Mrs. Garcia" or "Advanced Math 1"
+    name: Mapped[str] = mapped_column(String(100), nullable=False)
     
     # Academic Structure
     subject_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), ForeignKey("subjects.id"), nullable=False)
-    grade_level: Mapped[str] = mapped_column(String(10), nullable=False)  # "K", "1", "2"..."8", "MULTI"
-    classroom_type: Mapped[str] = mapped_column(String(20), nullable=False, default="CORE")  # "CORE", "ENRICHMENT", "SPECIAL"
+    grade_level: Mapped[str] = mapped_column(String(10), nullable=False)
+    classroom_type: Mapped[str] = mapped_column(String(20), nullable=False, default="CORE")
     
     # Academic Year Association
     academic_year_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), ForeignKey("academic_years.id"), nullable=False)
     
-    # Room Assignment (FIXED - was missing)
+    # Room Assignment
     room_id: Mapped[Optional[uuid.UUID]] = mapped_column(UUID(as_uuid=True), ForeignKey("rooms.id"), nullable=True)
     
     # Optional Capacity Limit
     max_students: Mapped[Optional[int]] = mapped_column(Integer, nullable=True)
     
-    # Relationships
+    # FIXED RELATIONSHIPS - Using back_populates instead of backref
     subject = relationship("Subject", back_populates="classrooms")
     academic_year = relationship("AcademicYear", back_populates="classrooms")
     room = relationship("Room", back_populates="classrooms")
@@ -38,7 +38,7 @@ class Classroom(Base):
     enrollments = relationship("Enrollment", back_populates="classroom", cascade="all, delete-orphan")
     
     def __repr__(self):
-        return f"<Classroom {self.name} - {self.grade_level} {self.subject.name if self.subject else 'Unknown Subject'}>"
+        return f"<Classroom {self.name} - {self.grade_level}>"
     
     @property
     def primary_teacher(self):
