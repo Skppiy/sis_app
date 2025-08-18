@@ -36,7 +36,7 @@ class ParentOut(ParentBase):
 
     class Config:
         orm_mode = True
-        from_attributes = True
+
 
 class ParentStudentRelationshipBase(BaseModel):
     relationship_type: str  # MOTHER, FATHER, GUARDIAN, STEPPARENT
@@ -73,4 +73,3 @@ class ParentStudentRelationshipOut(ParentStudentRelationshipBase):
 
     class Config:
         orm_mode = True
-        from_attributes = True

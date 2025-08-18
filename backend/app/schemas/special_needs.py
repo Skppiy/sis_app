@@ -25,7 +25,7 @@ class SpecialNeedsTagOut(SpecialNeedsTagBase):
 
     class Config:
         orm_mode = True
-        from_attributes = True
+       
 
 class StudentSpecialNeedBase(BaseModel):
     severity_level: Optional[str] = None  # MILD, MODERATE, INTENSIVE
@@ -57,4 +57,4 @@ class StudentSpecialNeedOut(StudentSpecialNeedBase):
 
     class Config:
         orm_mode = True
-        from_attributes = True
+   

@@ -1,5 +1,6 @@
 // frontend/src/services/enrollmentService.js
 // Enrollment and classroom assignment logic
+import { apiGet, apiPost, apiDelete } from '../requestHelper';
 
 export class EnrollmentService {
     // Core enrollment operations

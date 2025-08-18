@@ -35,7 +35,7 @@ class TeacherInfo(BaseModel):
 
     class Config:
         orm_mode = True
-        from_attributes = True
+
 
 class TeacherAssignmentOut(BaseModel):
     id: UUID
@@ -53,7 +53,7 @@ class TeacherAssignmentOut(BaseModel):
 
     class Config:
         orm_mode = True
-        from_attributes = True
+
 
 class ClassroomOut(ClassroomBase):
     id: UUID
@@ -68,7 +68,7 @@ class ClassroomOut(ClassroomBase):
 
     class Config:
         orm_mode = True
-        from_attributes = True
+ 
 
 class ClassroomWithDetails(ClassroomOut):
     # enrollments: List[EnrollmentOut] = []  # Will add when we create enrollment schema
@@ -76,4 +76,4 @@ class ClassroomWithDetails(ClassroomOut):
 
     class Config:
         orm_mode = True
-        from_attributes = True
+    

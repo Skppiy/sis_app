@@ -1,5 +1,6 @@
 // frontend/src/services/specialNeedsService.js
 // Special needs management
+import { apiGet, apiPost, apiPut, apiDelete } from '../requestHelper';
 
 export class SpecialNeedsService {
     // Tag library management
@@ -42,4 +43,4 @@ export class SpecialNeedsService {
   }
   
   // Export all services
-  export { StudentService, EnrollmentService, SpecialNeedsService };
+  export { SpecialNeedsService };

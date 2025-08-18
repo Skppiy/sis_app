@@ -39,4 +39,3 @@ class SchoolOut(SchoolBase):
 
     class Config:
         orm_mode = True
-        from_attributes = True  # for SQLAlchemy 2.x

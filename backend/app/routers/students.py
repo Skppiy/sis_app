@@ -1,5 +1,5 @@
 # backend/app/routers/students.py
-# Complete students router following patterns from your working routers
+# FIXED VERSION - Simplified response handling
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -28,7 +28,7 @@ async def list_students(
     session: AsyncSession = Depends(get_db),
     _: any = Depends(get_current_user),
 ):
-    """Get all students with optional filtering - Simplified robust version"""
+    """Get all students with optional filtering - FIXED VERSION"""
     try:
         print("🔍 DEBUG: Starting list_students")
         print(f"🔍 DEBUG: Filters - school_id: {school_id}, grade_level: {grade_level}, is_active: {is_active}")
@@ -57,35 +57,21 @@ async def list_students(
         
         print(f"🔍 DEBUG: Raw query returned {len(students)} students")
         
-        # Convert to response format - keep it simple
-        response_students = []
+        # FIXED: Let FastAPI + Pydantic handle the conversion automatically
+        # Just return the SQLAlchemy objects directly
         for i, student in enumerate(students):
             print(f"🔍 Student {i+1}: {student.first_name} {student.last_name} (Active: {student.is_active})")
-            
-            # Create response object manually to avoid any schema issues
-            student_dict = {
-                "id": student.id,
-                "first_name": student.first_name,
-                "last_name": student.last_name,
-                "email": student.email,
-                "date_of_birth": student.date_of_birth,
-                "student_id": student.student_id,
-                "entry_date": student.entry_date,
-                "entry_grade_level": student.entry_grade_level,
-                "is_active": student.is_active,
-                "current_grade": student.entry_grade_level  # Use entry grade for now
-            }
-            response_students.append(StudentOut(**student_dict))
+            # Set current_grade property for the response
+            student.current_grade = student.entry_grade_level
         
-        print(f"🔍 DEBUG: Returning {len(response_students)} processed students")
-        return response_students
+        print(f"🔍 DEBUG: Returning {len(students)} students")
+        return students  # Let FastAPI handle the Pydantic conversion
         
     except Exception as e:
         print(f"❌ ERROR in list_students: {str(e)}")
         import traceback
         traceback.print_exc()
-        # Return empty list instead of crashing
-        return []
+        raise HTTPException(status_code=500, detail="Failed to get students")
 
 @router.get("/{student_id}", response_model=StudentWithDetails)
 async def get_student(

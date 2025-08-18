@@ -56,7 +56,7 @@ class StudentServiceTagOut(StudentServiceTagBase):
 
     class Config:
         orm_mode = True
-        from_attributes = True
+
 
 class StudentServiceAssignmentBase(BaseModel):
     tag_id: str
@@ -85,4 +85,3 @@ class StudentServiceAssignmentOut(StudentServiceAssignmentBase):
 
     class Config:
         orm_mode = True
-        from_attributes = True
