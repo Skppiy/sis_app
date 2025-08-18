@@ -15,6 +15,7 @@ from ..models.student_academic_record import StudentAcademicRecord
 from ..models.academic_year import AcademicYear
 from ..schemas.student import StudentCreate, StudentOut, StudentUpdate, StudentWithDetails
 from ..models.enrollment import Enrollment
+from ..models.classroom import Classroom  
 from ..schemas.enrollment import EnrollmentOut
 
 router = APIRouter(tags=["students"])
@@ -342,21 +343,31 @@ async def debug_student_info(
 @router.get("/{student_id}/enrollments", response_model=List[EnrollmentOut])
 async def get_student_enrollments(
     student_id: str,
+    academic_year_id: Optional[str] = Query(None, description="Filter by academic year"),
+    active_only: bool = Query(True, description="Only return active enrollments"),
     session: AsyncSession = Depends(get_db),
     _: any = Depends(get_current_user),
 ):
     """Get all enrollments for a specific student - Frontend expects this exact endpoint"""
     try:
+        # Validate student exists
         student = await session.get(Student, UUID(student_id))
         if not student:
             raise HTTPException(status_code=404, detail="Student not found")
         
-        result = await session.execute(
-            select(Enrollment)
-            .where(Enrollment.student_id == UUID(student_id))
-            .where(Enrollment.is_active == True)
-        )
+        query = select(Enrollment).where(Enrollment.student_id == UUID(student_id))
+        
+        if academic_year_id:
+            query = query.join(Classroom).where(Classroom.academic_year_id == UUID(academic_year_id))
+        
+        if active_only:
+            query = query.where(Enrollment.is_active == True)
+        
+        query = query.order_by(Enrollment.created_at.desc())
+        
+        result = await session.execute(query)
         enrollments = result.scalars().all()
+        
         return enrollments
         
     except HTTPException:
